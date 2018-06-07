@@ -1,0 +1,17 @@
+from distutils.core import setup, Extension
+#from distutils.extension import Extension
+
+wrapper = Extension(
+    'wrapper',
+    sources=['testNEST.cpp','TestSpectra.cpp','NEST.cpp'],
+    #include_dirs = ['/usr/local/include'],
+    language='"gcc-4.2.1"',
+    extra_compile_args=['-std=c++14'],
+    #library_dirs = ['/usr/local/lib'],
+    libraries=['boost_python27'],
+)
+
+setup(
+    name='wrapper',
+    version='0.1',
+    ext_modules=[wrapper])

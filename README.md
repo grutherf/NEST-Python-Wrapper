@@ -1,1 +1,0 @@
-# NEST-Python-Wrapper

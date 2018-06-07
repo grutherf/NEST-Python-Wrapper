@@ -18,4 +18,4 @@ Note that this likely only works for macs, but by changing '-mmacosx-version-min
 7) set some variable var = wrapper.nest_py_wrapper()
 
 8) finally, call var 1 = var.testNest([‘dummy’, …]) to store the results of NEST
-after the dummy variables, pass in the variables asked for in NEST readme with each argument in ‘ ’ and commas separating arguments.
+after the dummy variable, pass in the variables asked for in NEST readme with each argument in ‘ ’ and commas separating arguments.

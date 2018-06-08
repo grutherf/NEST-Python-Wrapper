@@ -1,0 +1,82 @@
+CC=g++
+OS := $(shell uname)
+HOST := $(shell hostname | cut -c 1-4)
+
+NESTDIR := $(shell cd ../; pwd)
+$(shell echo "export NESTPATH=$(NESTDIR)/libNEST/" > thislibNEST.sh)
+$(shell echo "setenv NESTPATH $(NESTDIR)/libNEST/" > thislibNEST.csh)
+$(shell echo "export NESTDATA=$(NESTDIR)/LCEAndEFieldMaps/" >> thislibNEST.sh)
+$(shell echo "setenv NESTDATA $(NESTDIR)/LCEAndEFieldMaps/" >> thislibNEST.csh)
+
+ifeq ($(OS),Darwin)
+       LINKFLAG =-shared -dynamiclib
+       OBJLINKFLAG =
+else
+       LINKFLAG =-fPIC -shared
+       OBJLINKFLAG =-fPIC
+endif
+
+#ENVIRONMENT VARIABLES
+ifneq (,$(filter $(HOST), pdsf osgg))
+    ifeq ($(PYTHON_DIR),)
+            PYTHON_DIR='/usr/common/usg/software/python/2.7.6'
+    endif
+	PYTHON_LIB='$(PYTHON_DIR)/lib'
+	PYTHON_INC='$(PYTHON_DIR)/include/python2.7'
+    ifeq ($(BOOST_DIR),)
+            BOOST_DIR='/usr/common/usg/software/boost/1.54.0'
+    endif
+	BOOST_LIB='$(BOOST_DIR)/lib'
+	BOOST_INC='$(BOOST_DIR)/include'
+    ifeq ($(ROOTSYS),)
+            ROOTSYS='/cvmfs/lz.opensciencegrid.org/ROOT/v5.34.32/slc6_gcc44_x86_64/root'
+    endif
+	ROOT_LIB='$(ROOTSYS)/lib'
+	ROOT_INC='$(ROOTSYS)/include'
+else
+	PYTHON_LIB='python-config --ldflags'
+	PYTHON_INC='python-config --includes'
+	BOOST_LIB=
+	BOOST_INC=
+	ROOT_LIB=`root-config --libdir`
+	ROOT_INC=`root-config --incdir`
+endif
+
+CFLAGS=-Wall -g -O3 -I$(ROOT_INC)
+LDFLAGS=-Wall -g -O3 -L$(ROOT_LIB) -lCore -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread
+
+CFLAGS_SO=-Wall -g -std=c++0x -O3 -I$(BOOST_INC) -I$(PYTHON_INC) -I$(ROOT_INC)
+LDFLAGS_SO=-Wall -g -std=c++0x -O3 -L$(BOOST_LIB) -L$(PYTHON_LIB) -L$(ROOT_LIB) -lboost_python -lpython2.7 -lCore -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread
+
+OBJECTS= obj/NEST.o
+SHAREDLIB= libNEST
+EXECUTABLES= example_cpp
+OTHEREXECUTABLE= ddBandGenerator 
+
+################################################################################
+root: $(EXECUTABLES) $(OTHEREXECUTABLE)
+
+python: $(SHAREDLIB)
+
+clean:
+	rm -f $(SHAREDLIB).so obj/*.o $(EXECUTABLES)
+################################################################################
+
+all: $(EXECUTABLES) $(OTHEREXECUTABLE)
+
+$(OBJECTS): obj/%.o : %.cxx %.h
+
+obj/%.o: %.cxx %.h
+	$(CC) $(OBJLINKFLAG) $< -c $(CFLAGS) -o $@
+
+$(EXECUTABLES): %: %.cc $(OBJECTS)
+	$(CC) $< -c $(CFLAGS) -o obj/$@.o
+	$(CC) obj/$@.o $(OBJECTS) $(LDFLAGS) -o $@
+
+$(OTHEREXECUTABLE): %: %.cc $(OBJECTS)
+	$(CC) $< -c $(CFLAGS) -o obj/$@.o
+	$(CC) obj/$@.o $(OBJECTS) $(LDFLAGS) -o $@
+
+$(SHAREDLIB): %: %.cpp $(OBJECTS)
+	$(CC) $(OBJLINKFLAG) $< -c $(CFLAGS_SO) -o obj/$@.o
+	$(CC) $(LINKFLAG) obj/$@.o $(OBJECTS) $(LDFLAGS_SO) -o $@.so 

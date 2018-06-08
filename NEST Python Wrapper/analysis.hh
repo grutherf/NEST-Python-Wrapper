@@ -11,7 +11,7 @@ int usePE = 0;
 int useS2 = 0; // xtra feature: 2 means S2 x-axis energy scale
 
 double minS1 = 0.; //units are controlled by the usePE flag
-double maxS1 = 165.;
+double maxS1 = 1e3;
 int numBins = 33;
 
 //for efficiency calculation

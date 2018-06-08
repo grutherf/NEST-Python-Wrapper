@@ -9,28 +9,46 @@ CC=g++
 DEBUG=
 OPTIMIZATION=-O3
 
+# OS Settings
+OS := $(shell uname)
+HOST := $(shell hostname | cut -c 1-4)
+CURRENT_DIR=$(shell pwd)
+# For Mac
+ifeq ($(OS),Darwin)
+LINKFLAG =-shared -dynamiclib
+OBJLINKFLAG =
+# Else (Linux)
+else
+LINKFLAG =-fPIC -shared
+OBJLINKFLAG =-fPIC
+endif
+
 CFLAGS=-std=c++11 -c $(DEBUG) $(OPTIMIZATION)
-CFLAGS_SO=-std=c++11 -O3 $(DEBUG)
+CFLAGS_SO=-std=c++11 $(DEBUG) $(OPTIMIZATION)
 
 BIN = testNEST
-OBJECTS = obj/NEST.o obj/TestSpectra.o 
-UTILS = .
+LIB = libNEST.so
+OBJECTS = obj/RandomGen.o obj/TestSpectra.o obj/VDetector.o
+HEADERS = NEST.hh $(wildcard Detectors/*.hh) 
 
 ################################################################################
-all: $(BIN)
+all: $(BIN) $(LIB)
 
 clean:
-	rm -f $(BIN) obj/*.o 
+	rm -f $(BIN) obj/*.o *.so
 ################################################################################
 
-$(BIN): obj/$(BIN).o $(OBJECTS)
-	$(CC) $(LIBS) -o $@ obj/$(BIN).o $(OBJECTS)
+$(BIN): $(BIN).cpp obj/NEST.o $(OBJECTS)
+	$(CC) $^ $(CFLAGS_SO) -o $@ 
 
-obj/$(BIN).o: $(BIN).cpp
-	$(CC) $< -c $(CFLAGS) -o $@
+$(LIB): obj/NEST.o $(OBJECTS)
+	$(CC) $^ $(CFLAGS_SO) $(LINKFLAG) -o $@
 
-$(OBJECTS): obj/%.o : $(UTILS)/%.cpp $(UTILS)/%.hh
+obj/NEST.o: NEST.cpp $(HEADERS) $(OBJECTS)
+	$(CC) $< $(CFLAGS) $(OBJLINKFLAG) -o $@
 
-obj/%.o: $(UTILS)/%.cpp $(UTILS)/%.hh
-	$(CC) $< -c $(CFLAGS) -o $@
+$(OBJECTS): obj/%.o : %.cpp $(HEADERS)
+
+obj/%.o: %.cpp $(HEADERS)
+	$(CC) $< $(CFLAGS) $(OBJLINKFLAG) -o $@
 

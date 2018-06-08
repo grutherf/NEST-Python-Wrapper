@@ -11,10 +11,15 @@
  * Created on August 1, 2017, 1:03 PM
  */
 
-// this part to be added for python wrapper ---> 
+#include "NEST.hh"
 #include "TestSpectra.hh"
 #include "analysis.hh"
-//#include "testNEST.hh"
+
+#include "Detectors/DetectorExample_XENON10.hh"
+#include "Detectors/LUX_Run3.hh"
+#include "Detectors/LUX_Run4.hh"
+
+// this part to be added for python wrapper --->
 #include <iostream>
 #include <string>
 #include <vector>
@@ -23,12 +28,16 @@
 #include <boost/python/extract.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 // this part to be added for python wrapper <---
+
 using namespace std;
 using namespace NEST;
 
+/*
+ * 
+ */
 
-double band[200][6], energies[3]; bool inGas = false;
-vector<vector<double> > GetBand ( vector<double> S1s, vector<double> S2s, bool resol );
+double band[200][6], energies[3];
+vector<vector<double>> GetBand ( vector<double> S1s, vector<double> S2s, bool resol );
 void GetEnergyRes ( vector<double> Es );
 
 // this part to be added for python wrapper --->
@@ -41,128 +50,128 @@ template<class T> boost::python::list std_vector_to_py_list(const std::vector<T>
 }
 
 struct nestOP{
-  boost::python::list nph;
-  boost::python::list ne;
-  boost::python::list s1_raw;
-  boost::python::list s1_zCorr;
-  boost::python::list s1c_spike;
-  boost::python::list ne_extract;
-  boost::python::list s2_raw;
-  boost::python::list s2_zCorr;
+    boost::python::list nph;
+    boost::python::list ne;
+    boost::python::list s1_raw;
+    boost::python::list s1_zCorr;
+    boost::python::list s1c_spike;
+    boost::python::list ne_extract;
+    boost::python::list s2_raw;
+    boost::python::list s2_zCorr;
 };
 
 class nest_py_wrapper{
- private:
-  int argc;
-  char** argv;
-  nestOP nest_op;
-  //  vector<int> nph;
-  //  vector<int> ne;
-  //  vector<double> s1_raw;
-  //  vector<double> s1_zCorr;
-  //  vector<double> s1c_spike;
-  //  vector<int> ne_extract;
-  //  vector<double> s2_raw;
-  //  vector<double> s2_zCorr;
-  int testNEST(int argc, char** argv, vector<int>& nph, vector<int>& ne, vector<double>& s1_raw, vector<double>& s1_zCorr, vector<double>& s1c_spike, vector<int>& ne_extract, vector<double>& s2_raw, vector<double>& s2_zCorr);  
- public:
-  nestOP testNEST(boost::python::list command_input);
+private:
+    int argc;
+    char** argv;
+    nestOP nest_op;
+    //  vector<int> nph;
+    //  vector<int> ne;
+    //  vector<double> s1_raw;
+    //  vector<double> s1_zCorr;
+    //  vector<double> s1c_spike;
+    //  vector<int> ne_extract;
+    //  vector<double> s2_raw;
+    //  vector<double> s2_zCorr;
+    int testNEST(int argc, char** argv, vector<int>& nph, vector<int>& ne, vector<double>& s1_raw, vector<double>& s1_zCorr, vector<double>& s1c_spike, vector<int>& ne_extract, vector<double>& s2_raw, vector<double>& s2_zCorr);
+public:
+    nestOP testNEST(boost::python::list command_input);
 };
 
 nestOP nest_py_wrapper::testNEST(boost::python::list command_input){
-  //int argc;
-  //char** argv;
-  vector<int> nph;
-  vector<int> ne;
-  vector<double> s1_raw;
-  vector<double> s1_zCorr;
-  vector<double> s1c_spike;
-  vector<int> ne_extract;
-  vector<double> s2_raw;
-  vector<double> s2_zCorr;
-  vector<boost::python::list> result;
-  int l = len(command_input);
-  argc = l;
-  argv = (char**)std::malloc(argc*sizeof(char *));
-  std::string str_[argc];
-  for(int i = 0; i < argc; i++){
-    str_[i] = boost::python::extract<std::string>(command_input[i]);
-    argv[i] = const_cast<char *>(str_[i].c_str());
-  }
-  //  argc = argc+1;
-  testNEST(argc, argv, nph, ne, s1_raw, s1_zCorr, s1c_spike, ne_extract, s2_raw, s2_zCorr);
-  free(argv);
-
-  //  std::cout<<endl<<endl<<endl;
-
-  //  for(int i = 0; i < nph.size();i++){
-  //    cout<<nph[i]<<endl;
-  //  }
-  boost::python::object print =
-    boost::python::import("__main__").attr("__builtins__").attr("print");
-
-  nest_op.nph = (std_vector_to_py_list<int>(nph));
-  nest_op.ne = (std_vector_to_py_list<int>(ne));
-  nest_op.s1_raw = (std_vector_to_py_list<double>(s1_raw));
-  nest_op.s1_zCorr = (std_vector_to_py_list<double>(s1_zCorr));
-  nest_op.s1c_spike = (std_vector_to_py_list<double>(s1c_spike));
-  nest_op.ne_extract = (std_vector_to_py_list<int>(ne_extract));
-  nest_op.s2_raw = (std_vector_to_py_list<double>(s2_raw));
-  nest_op.s2_zCorr  = (std_vector_to_py_list<double>(s2_zCorr));
-
-  if(0)
-  {
-    for(int i = 0; i < len(nest_op.nph);i++){
-      print(boost::python::object(nest_op.nph[i]));
+    //int argc;
+    //char** argv;
+    vector<int> nph;
+    vector<int> ne;
+    vector<double> s1_raw;
+    vector<double> s1_zCorr;
+    vector<double> s1c_spike;
+    vector<int> ne_extract;
+    vector<double> s2_raw;
+    vector<double> s2_zCorr;
+    vector<boost::python::list> result;
+    int l = len(command_input);
+    argc = l;
+    argv = (char**)std::malloc(argc*sizeof(char *));
+    std::string str_[argc];
+    for(int i = 0; i < argc; i++){
+        str_[i] = boost::python::extract<std::string>(command_input[i]);
+        argv[i] = const_cast<char *>(str_[i].c_str());
     }
-  }
-  return nest_op;
+    //  argc = argc+1;
+    testNEST(argc, argv, nph, ne, s1_raw, s1_zCorr, s1c_spike, ne_extract, s2_raw, s2_zCorr);
+    free(argv);
+    
+    //  std::cout<<endl<<endl<<endl;
+    
+    //  for(int i = 0; i < nph.size();i++){
+    //    cout<<nph[i]<<endl;
+    //  }
+    boost::python::object print =
+    boost::python::import("__main__").attr("__builtins__").attr("print");
+    
+    nest_op.nph = (std_vector_to_py_list<int>(nph));
+    nest_op.ne = (std_vector_to_py_list<int>(ne));
+    nest_op.s1_raw = (std_vector_to_py_list<double>(s1_raw));
+    nest_op.s1_zCorr = (std_vector_to_py_list<double>(s1_zCorr));
+    nest_op.s1c_spike = (std_vector_to_py_list<double>(s1c_spike));
+    nest_op.ne_extract = (std_vector_to_py_list<int>(ne_extract));
+    nest_op.s2_raw = (std_vector_to_py_list<double>(s2_raw));
+    nest_op.s2_zCorr  = (std_vector_to_py_list<double>(s2_zCorr));
+    
+    if(0)
+    {
+        for(int i = 0; i < len(nest_op.nph);i++){
+            print(boost::python::object(nest_op.nph[i]));
+        }
+    }
+    return nest_op;
 }
 
 // this part to be added for python wrapper <-------
 
-
 //this method declaration used to be that of the main method. Simply change the name (and arguments if needed)
 // this part to be modified for python wrapper --->
 int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<int>& ne, vector<double>& s1_raw, vector<double>& s1_zCorr, vector<double>& s1c_spike, vector<int>& ne_extract, vector<double>& s2_raw, vector<double>& s2_zCorr) {
-// this part to be modified for python wrapper <---  
+    // this part to be modified for python wrapper <---
+    
+  // Instantiate your own VDetector class here, then load into NEST class constructor
+	//DetectorExample_XENON10* detector = new DetectorExample_XENON10();
+	LUX_Run3* detector = new LUX_Run3();
+	//LUX_Run4* detector = new LUX_Run4();
+	NEST::NESTcalc n(detector);
 
-  
-  int debug = 1;
-  
-  NEST::NESTcalc n; vector<double> signal1,signal2,signalE, vTable, NuisParam; int index;
-  NuisParam.push_back(1.);
-  NuisParam.push_back(1.);
+	vector<double> signal1,signal2,signalE, vTable, NuisParam={1.,1.}; int index;
   string position, delimiter, token; size_t loc;
-  double pos_x,pos_y,pos_z,r,phi,driftTime, field, vD, vD_middle, atomNum=0, massNum=0;
+  double pos_x,pos_y,pos_z,r,phi,driftTime, field, vD,vD_middle, atomNum=0,massNum=0, keVee=0.0;
   
-  if (argc < 8)
+  if (argc < 7)
     {
-      cout << "This program takes 6 (or 7) inputs, with Z position in mm from bottom of detector." << endl << endl;
-      cout << "numEvts type_interaction E_min[keV] E_max[keV] field_drift[V/cm] x,y,z-position[mm] min_dt,max_dt[us] {optional:seed}" << endl;
-      cout << "for 8B or WIMPs, numEvts is kg-days of exposure" << endl << endl;
-      cout << "exposure[kg-days] {WIMP} m[GeV] x-sect[cm^2] field_drift[V/cm] x,y,z-position[mm] min_dt,max_dt[us] {optional:seed}" << endl;
-      cout << "for cosmic-ray muons or other similar particles with elongated track lengths..." << endl << endl;
-      cout << "numEvts {MIP} LET[MeV*cm^2/gram] step_size[cm] field_drift[V/cm] x,y,z-position[mm] min_dt,max_dt[us] {optional:seed}" << endl;
+      cout << "This program takes 6 (or 7) inputs, with Z position in mm from bottom of detector:" << endl;
+      cout << "\t./testNEST numEvts type_interaction E_min[keV] E_max[keV] field_drift[V/cm] x,y,z-position[mm] {optional:seed}" << endl << endl;
+      cout << "For 8B or WIMPs, numEvts is kg-days of exposure:" << endl;
+      cout << "\t./testNEST exposure[kg-days] {WIMP} m[GeV] x-sect[cm^2] field_drift[V/cm] x,y,z-position[mm] {optional:seed}" << endl << endl;
+      cout << "For cosmic-ray muons or other similar particles with elongated track lengths:" << endl;
+      cout << "\t./testNEST numEvts {MIP} LET[MeV*cm^2/gram] step_size[cm] field_drift[V/cm] x,y,z-position[mm] {optional:seed}" << endl << endl;
       return 0;
     }
   unsigned long int numEvts = atoi(argv[1]);
   
   string type = argv[2];
   INTERACTION_TYPE type_num;
-  WIMP_spectrum_prep wimp_spectrum_prep; //used only in WIMP case
+	TestSpectra spec;
   if ( type == "NR" || type == "neutron" ) type_num = NR;
   else if (type == "WIMP")
     {
       if (atof(argv[3])<0.44) { cerr << "WIMP mass too low, you're crazy!" << endl; return 0; }
-			type_num = WIMP;
-      wimp_spectrum_prep= WIMP_prep_spectrum(atof(argv[3]),n,E_step);
-      numEvts = n.poisson_draw(wimp_spectrum_prep.integral * 1.0 * atof(argv[1]) * atof(argv[4]) / 1e-36);
+      type_num = WIMP;
+      spec.wimp_spectrum_prep= spec.WIMP_prep_spectrum(atof(argv[3]), E_step);
+      numEvts = RandomGen::rndm()->poisson_draw(spec.wimp_spectrum_prep.integral * 1.0 * atof(argv[1]) * atof(argv[4]) / 1e-36);
     }
   else if ( type == "B8" || type == "Boron8" || type == "8Boron" || type == "8B" || type == "Boron-8" )
     {
       type_num = B8;
-      numEvts = n.poisson_draw(0.0026 * atof(argv[1]));
+      numEvts = RandomGen::rndm()->poisson_draw(0.0026 * atof(argv[1]));
     } else if ( type == "DD" || type == "D-D" ) type_num = DD;
   else if ( type == "AmBe" ) type_num = AmBe;
   else if ( type == "Cf" || type == "Cf252" || type == "252Cf" || type == "Cf-252" ) type_num = Cf;
@@ -179,7 +188,7 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
   else if ( type == "gamma" || type == "gammaRay" ||
 	    type == "x-ray" || type == "xray" || type == "xRay" || type == "X-ray" || type == "Xray" || type == "XRay" )
     type_num = gammaRay; //includes photo-absorption and electron capture
-	else if ( type == "Kr83m" || type == "83mKr" || type == "Kr83" ) type_num = Kr83m;
+  else if ( type == "Kr83m" || type == "83mKr" || type == "Kr83" ) type_num = Kr83m;
   else if ( type == "CH3T" || type == "tritium" ) type_num = CH3T;
   else if ( type == "beta" || type == "ER" || type == "Compton" || type == "compton" || type == "electron" || type == "e-" ||
 	    type == "muon" || type == "MIP" || type == "LIP" || type == "mu" || type == "mu-" )
@@ -205,64 +214,65 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
   
   double eMin = atof(argv[3]);
   double eMax = atof(argv[4]);
-  DetectorParameters detParam = n.GetDetector(-999.,-999.,-999.,inGas);
-  double rho = n.SetDensity ( detParam.temperature, detParam.pressure ); //cout.precision(12);
-  if ( rho < 1. ) inGas = true;
-  detParam = n.GetDetector ( 0., 0., detParam.GXeInterface/2., inGas );
-  if ( atof(argv[5]) == -1. ) {
-    vTable = n.SetDriftVelocity_NonUniform(rho,inGas,z_step);
-    vD_middle = vTable[int(floor(.5*detParam.GXeInterface/z_step))];
+
+  double rho = n.SetDensity ( detector->get_T_Kelvin(), detector->get_p_bar() ); //cout.precision(12);
+  if ( rho < 1. ) detector->set_inGas(true);
+  
+	// Print g1 and g2 values, requiring S2 calculation for 1 SE and x,y,d = 0,0,0
+  vector<double> secondary = n.GetS2 ( 1, 0., 0., 0., 1. );
+  
+	if ( atof(argv[5]) == -1. ) {
+    vTable = n.SetDriftVelocity_NonUniform(rho, z_step);
+    vD_middle = vTable[int(floor(.5*detector->get_TopDrift()/z_step))];
   }
-  else {
-    vD_middle = n.SetDriftVelocity(detParam.temperature,rho,atof(argv[5]));
-  }
+  else vD_middle = n.SetDriftVelocity(detector->get_T_Kelvin(), rho, atof(argv[5]));
   cout << "Density = " << rho << " g/mL" << "\t";
   cout << "central vDrift = " << vD_middle << " mm/us\n";
-	cout << "\t\t\t\t\t\t\t\t\t\tNegative numbers are flagging things below threshold!\n";
-
+  cout << "\t\t\t\t\t\t\t\t\t\tNegative numbers are flagging things below threshold!\n";
   
   if ( type_num == Kr83m && eMin == 9.4 && eMax == 9.4 )
     fprintf(stdout, "t [ns]\t\tE [keV]\t\tfield [V/cm]\ttDrift [us]\tX,Y,Z [mm]\tNph\tNe-\tS1_raw [PE]\tS1_Zcorr\tS1c_spike\tNe-Extr\tS2_rawArea\tS2_Zcorr [phd]\n");
   else
     fprintf(stdout, "E [keV]\t\tfield [V/cm]\ttDrift [us]\tX,Y,Z [mm]\tNph\tNe-\tS1_raw [PE]\tS1_Zcorr\tS1c_spike\tNe-Extr\tS2_rawArea\tS2_Zcorr [phd]\n");
   
-	// JC, modified to accommodate Run 4 drift ranges, 3/29/2018
-  //if (argc >= 8) n.SetRandomSeed(atoi(argv[7]));
-  if (argc >= 9) n.SetRandomSeed(atoi(argv[8]));
+  if (argc >= 8) RandomGen::rndm()->SetSeed(atoi(argv[7]));
+  
+  if ( type_num != WIMP && type_num != B8 ) {
+    NEST::YieldResult yieldsMax = n.GetYields(type_num, eMax, rho, detector->FitEF(0., 0., detector->get_TopDrift()/2.),
+					      double(massNum), double(atomNum), NuisParam);
+    if ( (0.1*yieldsMax.PhotonYield) > (2.*maxS1) && eMin != eMax )
+      cerr << "\nWARNING: Your energy maximum may be too high given your maxS1.\n";
+  }
   
   double keV = -999;
-
-
   for (unsigned long int j = 0; j < numEvts; j++) {
-
-
-
+    
     if (eMin == eMax) {
       keV = eMin;
     } else {
       switch (type_num) {
       case CH3T:
-	keV = CH3T_spectrum(eMin, eMax, n);
+	keV = spec.CH3T_spectrum(eMin, eMax);
 	break;
-	//      case B8: //normalize this to ~3500 / 10-ton / year, for E-threshold of 0.5 keVnr, OR 180 evts/t/yr/keV at 1 keV
-	//	keV = B8_spectrum(eMin, eMax, n);
-	//	break;
+      case B8: //normalize this to ~3500 / 10-ton / year, for E-threshold of 0.5 keVnr, OR 180 evts/t/yr/keV at 1 keV
+	keV = spec.B8_spectrum(eMin, eMax);
+	break;
       case AmBe: //for ZEPLIN-III FSR from HA (Pal '98)
-	keV = AmBe_spectrum(eMin, eMax, n);
+	keV = spec.AmBe_spectrum(eMin, eMax);
 	break;
       case Cf:
-	keV = Cf_spectrum(eMin, eMax, n);
+	keV = spec.Cf_spectrum(eMin, eMax);
 	break;
       case DD:
-	keV = DD_spectrum(eMin, eMax, n);
+	keV = spec.DD_spectrum(eMin, eMax);
 	break;
       case WIMP:
 	{
-          keV = WIMP_spectrum(wimp_spectrum_prep, atof(argv[3]), n);
+          keV = spec.WIMP_spectrum(spec.wimp_spectrum_prep, atof(argv[3]));
 	}
 	break;
       default:
-	keV = eMin + (eMax - eMin) * n.rand_uniform();
+	keV = eMin + (eMax - eMin) * RandomGen::rndm()->rand_uniform();
 	break;
       }
     }
@@ -274,9 +284,9 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
     
   Z_NEW:
     if ( atof(argv[6]) == -1. ) { // -1 means default, random location mode
-      pos_z = 0. + ( detParam.GXeInterface - 0. ) * n.rand_uniform(); // initial guess
-      r = detParam.rad * sqrt ( n.rand_uniform() );
-      phi = 2.*M_PI*n.rand_uniform();
+      pos_z = 0. + ( detector->get_TopDrift() - 0. ) * RandomGen::rndm()->rand_uniform(); // initial guess
+      r = detector->get_radius() * sqrt ( RandomGen::rndm()->rand_uniform() );
+      phi = 2.*M_PI*RandomGen::rndm()->rand_uniform();
       pos_x = r * cos(phi); pos_y = r * sin(phi);
     }
     else {
@@ -292,18 +302,17 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
       }
       pos_z = stof(position);
       if ( stof(position) == -1. )
-	pos_z = 0. + ( detParam.GXeInterface - 0. ) * n.rand_uniform();
+	pos_z = 0. + ( detector->get_TopDrift() - 0. ) * RandomGen::rndm()->rand_uniform();
       if ( stof(token) == -999. ) {
-	r = detParam.rad * sqrt ( n.rand_uniform() );
-	phi = 2.*M_PI*n.rand_uniform();
+	r = detector->get_radius() * sqrt ( RandomGen::rndm()->rand_uniform() );
+	phi = 2.*M_PI*RandomGen::rndm()->rand_uniform();
 	pos_x = r * cos(phi); pos_y = r * sin(phi); }
     }
     
     if ( atof(argv[5]) == -1. ) { // -1 means use poly position dependence
-      detParam = n.GetDetector ( pos_x, pos_y, pos_z, inGas ); field = detParam.efFit;
+			field = detector->FitEF(pos_x, pos_y, pos_z);
     }
     else field = atof(argv[5]);
-    
     
     if ( field <= 0. )
       cerr << "\nWARNING: A LITERAL ZERO FIELD MAY YIELD WEIRD RESULTS. USE A SMALL VALUE INSTEAD.\n";
@@ -315,31 +324,13 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
       vD = vTable[index];
     }
     else
-    	vD = n.SetDriftVelocity(detParam.temperature,rho,field);
-    driftTime = ( detParam.GXeInterface - pos_z ) / vD; // (mm - mm) / (mm / us) = us
-    if ( atof(argv[5]) != -1. && detParam.dtExtrema[0] > ( detParam.GXeInterface - 0. ) / vD )
+      vD = n.SetDriftVelocity(detector->get_T_Kelvin(),rho,field);
+    driftTime = ( detector->get_TopDrift() - pos_z ) / vD; // (mm - mm) / (mm / us) = us
+    if ( atof(argv[5]) != -1. && detector->get_dt_min() > ( detector->get_TopDrift() - 0. ) / vD )
       { cerr << "ERROR: dt_min is too restrictive (too large)" << endl; return 0; }
-	 	
-		/////////////////////////////////////////////////////////////////////////////////////
-		// Added by JC for modification of drift ranges (Run 4), 3/29/2018
-		double new_dt_min = detParam.dtExtrema[0];
-		double new_dt_max = detParam.dtExtrema[1];
-    if ( atof(argv[7]) != -1. ) {
-      position = argv[7];
-      delimiter = ",";
-      loc = position.find(delimiter);
-			token = position.substr(0,loc);
-			new_dt_min = stof(token);
-			position.erase(0,loc+delimiter.length());
-			token = position.substr(0,position.length());
-			new_dt_max = stof(token);
-    }
-		n.DriftRangeOverride(new_dt_min, new_dt_max, detParam);
-		/////////////////////////////////////////////////////////////////////////////////////
-		
-		if ( (driftTime > detParam.dtExtrema[1] || driftTime < detParam.dtExtrema[0]) && (atof(argv[6]) == -1. || stof(position) == -1.) )
+    if ( (driftTime > detector->get_dt_max() || driftTime < detector->get_dt_min()) && (atof(argv[6]) == -1. || stof(position) == -1.) )
       goto Z_NEW;
-    if ( detParam.dtExtrema[1] > (detParam.GXeInterface-0.)/vD && !j )
+    if ( detector->get_dt_max() > (detector->get_TopDrift()-0.)/vD && !j )
       { cerr << "WARNING: dt_max is greater than max possible" << endl; }
     
     NEST::YieldResult yields; NEST::QuantaResult quanta;
@@ -347,26 +338,24 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
     if ( type == "muon" || type == "MIP" || type == "LIP" || type == "mu" || type == "mu-" ) {
       double dEOdx = eMin, eStep = dEOdx * rho * zStep * 1e3, refEnergy = 1e6; keV = 0.;
       int Nph = 0, Ne = 0;
-      for ( double zz = detParam.GXeInterface; zz > 0; zz -= zStep*10. ) {
-	detParam = n.GetDetector ( pos_x, pos_y, zz, inGas );
-	yields = n.GetYields ( beta, refEnergy, rho, detParam.efFit, double(massNum), double(atomNum), NuisParam );
+      for ( double zz = detector->get_TopDrift(); zz > 0; zz -= zStep*10. ) { //only VERTICAL-going muons work right now
+	yields = n.GetYields ( beta, refEnergy, rho, detector->FitEF(pos_x, pos_y, zz), double(massNum), double(atomNum), NuisParam );
 	quanta = n.GetQuanta ( yields, rho );
 	Nph+= quanta.photons * (eStep/refEnergy);
 	Ne += quanta.electrons*(eStep/refEnergy);
 	keV+= eStep;
-      }
+			}
       quanta.photons = Nph; quanta.electrons = Ne;
-      pos_z = detParam.GXeInterface / 2.;
-      driftTime = ( detParam.GXeInterface - pos_z ) / vD_middle;
-      detParam = n.GetDetector ( pos_x, pos_y, pos_z, inGas );
-      field = detParam.efFit;
-    }
+      pos_z = detector->get_TopDrift() / 2.; //approximate everything as middle of detector since muon goes through whole detector
+      driftTime = ( detector->get_TopDrift() - pos_z ) / vD_middle;
+    	field = detector->FitEF(pos_x, pos_y, pos_z);
+		}
     else {
       yields = n.GetYields(type_num,keV,rho,field,
 			   double(massNum),double(atomNum),NuisParam);
       quanta = n.GetQuanta(yields,rho);
     }
-
+    
     vector<double> scint = n.GetS1(quanta.photons,pos_x,pos_y,pos_z,
 				   vD,vD_middle,type_num);
     if ( usePE == 0 && fabs(scint[3]) > minS1 && scint[3] < maxS1 )
@@ -377,8 +366,8 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
       signal1.push_back(scint[7]);
     else signal1.push_back(0.);
     
-    vector<double> scint2= n.GetS2(quanta.electrons,pos_x,pos_y,driftTime,vD,inGas);
-		if ( usePE == 0 && fabs(scint2[5]) > minS2 && scint2[5] < maxS2 )
+    vector<double> scint2= n.GetS2(quanta.electrons, pos_x, pos_y, driftTime, vD);
+    if ( usePE == 0 && fabs(scint2[5]) > minS2 && scint2[5] < maxS2 )
       signal2.push_back(scint2[5]);
     else if ( usePE >= 1 && fabs(scint2[7]) > minS2 && scint2[7] < maxS2 )
       signal2.push_back(scint2[7]); //no spike option for S2
@@ -397,8 +386,10 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
 	Nph= 0.;
       if ( signal2.back() <= 0. )
 	Ne = 0.;
-      if ( yields.Lindhard > DBL_MIN && Nph > 0. && Ne > 0. )
+      if ( yields.Lindhard > DBL_MIN && Nph > 0. && Ne > 0. ) {
 	keV = ( Nph + Ne ) * W_DEFAULT * 1e-3 / yields.Lindhard;
+	keVee+=( Nph + Ne ) * W_DEFAULT * 1e-3;
+      }
       else
 	keV = 0.;
     }
@@ -413,13 +404,18 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
       pos_y = xySmeared[1];
     }
     
-    if ( 0 ) { //fabs(scint[7]) > DBL_MIN && fabs(scint2[7]) > DBL_MIN ) { //if you want to skip specific below-threshold events, then please comment in this if statement
-			printf("%.6f\t%.6f\t%.6f\t%.0f, %.0f, %.0f\t%d\t%d\t",keV,field,driftTime,pos_x,pos_y,pos_z,quanta.photons,quanta.electrons); //comment this out when below line in
-			//printf("%.6f\t%.6f\t%.6f\t%.0f, %.0f, %.0f\t%lf\t%lf\t",keV,field,driftTime,pos_x,pos_y,pos_z,yields.PhotonYield,yields.ElectronYield); //for when you want means
-			printf("%.6f\t%.6f\t%.6f\t", scint[2], scint[5], scint[7]); //see GetS1 inside of NEST.cpp for full explanation of all 8 scint return vector elements. Sample 3 most common
-			printf("%i\t%.6f\t%.6f\n", (int)scint2[0], scint2[4], scint2[7]); //see GetS2 inside of NEST.cpp for full explanation of all 8 scint2 vector elements. Change as you desire
-   	}
-
+    if ( 1 ) { //fabs(scint[7]) > DBL_MIN && fabs(scint2[7]) > DBL_MIN ) { //if you want to skip specific below-threshold events, then please comment in this if statement
+      printf("%.6f\t%.6f\t%.6f\t%.0f, %.0f, %.0f\t%d\t%d\t",keV,field,driftTime,pos_x,pos_y,pos_z,quanta.photons,quanta.electrons); //comment this out when below line in
+      //printf("%.6f\t%.6f\t%.6f\t%.0f, %.0f, %.0f\t%lf\t%lf\t",keV,field,driftTime,pos_x,pos_y,pos_z,yields.PhotonYield,yields.ElectronYield); //for when you want means
+      if ( keV > 1000. ) { //switch to exponential notation to make output more readable, if energy is too high (>1 MeV)
+	printf("%e\t%e\t%e\t", scint[2], scint[5], scint[7]);
+	printf("%li\t%e\t%e\n", (long)scint2[0], scint2[4], scint2[7]);
+      }
+      else {
+	printf("%.6f\t%.6f\t%.6f\t", scint[2], scint[5], scint[7]); //see GetS1 inside of NEST.cpp for full explanation of all 8 scint return vector elements. Sample 3 most common
+	printf("%i\t%.6f\t%.6f\n", (int)scint2[0], scint2[4], scint2[7]); //see GetS2 inside of NEST.cpp for full explanation of all 8 scint2 vector elements. Change as you desire
+      }
+    }
     // this part to be added for python wrapper --->
     nph.push_back(quanta.photons);
     ne.push_back(quanta.electrons);
@@ -438,32 +434,43 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
     else
       GetBand ( signal1, signal2, false );
     fprintf(stderr,"Bin Center\tBin Actual\tHist Mean\tMean Error\tHist Sigma\t\tEff[%%>thr]\n");
-    for ( int j = 0; j < numBins; j++ )
+    for ( int j = 0; j < numBins; j++ ) {
       fprintf(stderr,"%lf\t%lf\t%lf\t%lf\t%lf\t\t%lf\n",band[j][0],band[j][1],band[j][2],band[j][4],band[j][3],band[j][5]*100.);
+      if ( band[j][0] <= 0.0 || band[j][1] <= 0.0 || band[j][2] <= 0.0 || band[j][3] <= 0.0 || band[j][4] <= 0.0 || band[j][5] <= 0.0 ||
+           std::isnan(band[j][0]) || std::isnan(band[j][1]) || std::isnan(band[j][2]) || std::isnan(band[j][3]) || std::isnan(band[j][4]) || std::isnan(band[j][5]) )
+	{ if ( eMax != -999. ) cerr << "WARNING: Insufficient number of high-energy events to populate highest bins is likely.\n"; eMax = -999.; }
+    }
   }
   else {
     GetBand ( signal1, signal2, true );
     GetEnergyRes ( signalE );
-    fprintf(stderr,"S1 Mean\t\tS1 Res [%%]\tS2 Mean\t\tS2 Res [%%]\tEc Mean\t\tEc Res[%%]\tEff[%%>thr]\n");
+    if ( type_num == NR ) {
+      fprintf(stderr,"S1 Mean\t\tS1 Res [%%]\tS2 Mean\t\tS2 Res [%%]\tEc [keVnr]\tEc Res[%%]\tEff[%%>thr]\tEc [keVee]\n");
+      keVee /= numEvts;
+    }
+    else
+      fprintf(stderr,"S1 Mean\t\tS1 Res [%%]\tS2 Mean\t\tS2 Res [%%]\tEc Mean\t\tEc Res[%%]\tEff[%%>thr]\n"); //the C here refers to the combined (S1+S2) energy scale
     for ( int j = 0; j < numBins; j++ ) {
-      fprintf(stderr,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",band[j][0],band[j][1]/band[j][0]*100.,
+      fprintf(stderr,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t",band[j][0],band[j][1]/band[j][0]*100.,
 	      band[j][2],band[j][3]/band[j][2]*100.,energies[0],energies[1]/energies[0]*100.,energies[2]*100.);
+      if ( type_num == NR ) fprintf(stderr,"%lf\n",keVee/energies[2]); else fprintf(stderr,"\n");
       if ( band[j][0] <= 0.0 || band[j][1] <= 0.0 || band[j][2] <= 0.0 || band[j][3] <= 0.0 ||
 	   std::isnan(band[j][0]) || std::isnan(band[j][1]) || std::isnan(band[j][2]) || std::isnan(band[j][3]) )
 	cerr << "CAUTION: YOUR S1 and/or S2 MIN and/or MAX may be set to be too restrictive, please check.\n";
       else if ( energies[0] == eMin || energies[0] == eMax || energies[1] <= 0.0 )
 	cerr << "If your energy resolution is 0% then you probably still have MC truth energy on." << endl;
-      else ; }
+      else ;
+    }
   }
   
   return 1;
   
 }
 
-vector<vector<double> > GetBand ( vector<double> S1s,
+vector<vector<double>> GetBand ( vector<double> S1s,
 				 vector<double> S2s, bool resol ) {
   
-  vector<vector<double> > signals;
+  vector<vector<double>> signals;
   signals.resize(200,vector<double>(1,-999.));
   double binWidth, border;
   if ( useS2 == 2 ) {
@@ -482,7 +489,7 @@ vector<vector<double> > GetBand ( vector<double> S1s,
     binWidth = DBL_MAX;
   }
   
-  for ( i = 0; i < int(S1s.size()); i++ ) {
+  for ( i = 0; i < S1s.size(); i++ ) {
     for ( j = 0; j < numBins; j++ ) {
       s1c = border + binWidth/2. + double(j) * binWidth;
       if ( i == 0 && !resol ) band[j][0] = s1c;
@@ -560,28 +567,28 @@ void GetEnergyRes ( vector<double> Es ) {
   
   energies[2] = numerator / double ( numPts );
   return;
+  
 }
-
 
 // this part to be added for python wrapper --->
 using namespace boost::python;
 BOOST_PYTHON_MODULE(wrapper)
 {
-  class_<std::vector<boost::python::list> >("double_vector1")
+    class_<std::vector<boost::python::list> >("double_vector1")
     .def(vector_indexing_suite<std::vector<boost::python::list> >());
-
-  class_<std::vector<int> >("double_vector2")
+    
+    class_<std::vector<int> >("double_vector2")
     .def(vector_indexing_suite<std::vector<int> >());
-
-  class_<std::vector<double> >("double_vector2")
+    
+    class_<std::vector<double> >("double_vector2")
     .def(vector_indexing_suite<std::vector<double> >());
-
-  nestOP (nest_py_wrapper::*testNEST)(boost::python::list) = &nest_py_wrapper::testNEST;
-  
-  class_<nest_py_wrapper>("nest_py_wrapper")
-   .def("testNEST", testNEST);
-  
-  class_<nestOP>("nestOP")
+    
+    nestOP (nest_py_wrapper::*testNEST)(boost::python::list) = &nest_py_wrapper::testNEST;
+    
+    class_<nest_py_wrapper>("nest_py_wrapper")
+    .def("testNEST", testNEST);
+    
+    class_<nestOP>("nestOP")
     .def_readonly("nph",&nestOP::nph)
     .def_readonly("ne",&nestOP::ne)
     .def_readonly("s1_raw",&nestOP::s1_raw)

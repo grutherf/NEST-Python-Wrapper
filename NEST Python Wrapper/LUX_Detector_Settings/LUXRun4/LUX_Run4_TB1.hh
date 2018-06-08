@@ -46,7 +46,7 @@ double FitS2 ( double xPos_mm, double yPos_mm ) {
 
  // Thermodynamic Properties
 
-double T_Kelvin = 178.; //for liquid drift speed calculation
+double T_Kelvin = 177.; //for liquid drift speed calculation
 double p_bar = 1.95; //gas pressure in units of bars, it controls S2 size
 
  // Data Analysis Parameters and Geometry

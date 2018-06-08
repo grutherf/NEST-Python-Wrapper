@@ -1,60 +1,12 @@
 
 #include "NEST.hh"
-//#include "/Volumes/USB20FD/z_git/NEST/LUX_Run03.hh"
-#include "detector.hh"
 #include "LUXSpikeCountLookup.h"
 
-using namespace NEST;
 using namespace std;
+using namespace NEST;
 
-double NESTcalc::rand_uniform() {
-  
-  return (double) (rng() - rng.min()) / (double) (rng.max() - rng.min());
-  
-}
 
-double NESTcalc::rand_gauss(double mean, double sigma) {
-  
-  double u = rand_uniform(), v = rand_uniform();
-  return mean + sigma * sqrt(-2. * log(u)) * cos(2. * M_PI * v);
-  
-}
-
-int NESTcalc::poisson_draw(double mean)
-  
-{
-  std::poisson_distribution<int> distribution(mean);
-  return distribution(rng);
-}
-
-double NESTcalc::rand_exponential(double half_life) {
-  
-  double r = rand_uniform();
-  return log(1 - r) * -1 * half_life / log(2.);
-  
-}
-
-vector<double> NESTcalc::VonNeumann(double xMin, double xMax, double yMin,double yMax,
-				    double xTest,double yTest,double fValue){
-  
-  vector<double> xyTry(3);
-  
-  xyTry[0]= xTest;
-  xyTry[1]= yTest;
-  
-  if ( xyTry[1] > fValue ) {
-    xyTry[0] = xMin+(xMax-xMin)*rand_uniform() ;
-    xyTry[1] = yMin+(yMax-yMin)*rand_uniform() ;
-    xyTry[2] = 1. ;
-  }
-  else
-    xyTry[2] = 0. ;
-  
-  return xyTry; //doing a vector means you can return 2 values at the same time
-  
-}
-
-int NESTcalc::BinomFluct(int N0, double prob) {
+long NESTcalc::BinomFluct(long N0, double prob) {
   
   double mean = N0*prob;
   double sigma = sqrt(N0 * prob * (1. - prob));
@@ -65,10 +17,10 @@ int NESTcalc::BinomFluct(int N0, double prob) {
   
   if (N0 < 10) {
     for (int i = 0; i < N0; i++) {
-      if (rand_uniform() < prob) N1++;
+      if (RandomGen::rndm()->rand_uniform() < prob) N1++;
     }
   } else {
-    N1 = int(floor(rand_gauss(mean, sigma) + 0.5));
+    N1 = int(floor(RandomGen::rndm()->rand_gauss(mean, sigma) + 0.5));
   }
   
   if (N1 > N0) N1 = N0;
@@ -84,7 +36,7 @@ NESTresult NESTcalc::FullCalculation(INTERACTION_TYPE species,double energy,doub
   NESTresult result;
   result.yields = GetYields(species,energy,density,dfield,A,Z,NuisParam);
   result.quanta=GetQuanta(result.yields,density);
-  result.photon_times = GetPhotonTimes(/*stuff*/);
+  result.photon_times = GetPhotonTimes(species,result.quanta);
   return result;
   
 }
@@ -94,44 +46,48 @@ double NESTcalc::PhotonTime(INTERACTION_TYPE species, bool exciton){
   //old code put here by Jason
   //times in ns
   double return_time=0;
-  double tau1 = rand_gauss(3.1,.7); //err from wgted avg.
-  double tau3 = rand_gauss(24.,1.); //ibid.
+  double tau1 = RandomGen::rndm()->rand_gauss(3.1,.7); //err from wgted avg.
+  double tau3 = RandomGen::rndm()->rand_gauss(24.,1.); //ibid.
   //these singlet and triplet times may not be the ones you're
   //used to, but are the world average: Kubota 79, Hitachi 83 (2
   //data sets), Teymourian 11, Morikawa 89, and Akimov '02
   double SingTripRatioX, SingTripRatioR;
   if(species==beta || species==Kr83m || species == gammaRay){ //these classes are questionable
     //disregard tauR from original model--it's very small for any electric field.
-    SingTripRatioX = rand_gauss(0.17,0.05);
-    SingTripRatioR = rand_gauss(0.8, 0.2);
+    SingTripRatioX = RandomGen::rndm()->rand_gauss(0.17,0.05);
+    SingTripRatioR = RandomGen::rndm()->rand_gauss(0.8, 0.2);
   }
   else if(species==ion){ //these classes are questionable
-    SingTripRatioR = rand_gauss(2.3,0.51);
+    SingTripRatioR = RandomGen::rndm()->rand_gauss(2.3,0.51);
     SingTripRatioX = SingTripRatioR;
   }
   else{//NR //these classes are questionable
-    SingTripRatioR = rand_gauss(7.8,1.5);
+    SingTripRatioR = RandomGen::rndm()->rand_gauss(7.8,1.5);
     SingTripRatioX = SingTripRatioR;
   }
   if(exciton){
-    if (rand_uniform() < SingTripRatioR / (1 + SingTripRatioR))
-      return_time = tau1 * -log(rand_uniform());
-    else return_time = tau3 * -log(rand_uniform());
+    if (RandomGen::rndm()->rand_uniform() < SingTripRatioR / (1 + SingTripRatioR))
+      return_time = tau1 * -log(RandomGen::rndm()->rand_uniform());
+    else return_time = tau3 * -log(RandomGen::rndm()->rand_uniform());
   } else {
-    if (rand_uniform() < SingTripRatioX / (1 + SingTripRatioX))
-      return_time = tau1 * -log(rand_uniform());
-    else return_time = tau3 * -log(rand_uniform());
+    if (RandomGen::rndm()->rand_uniform() < SingTripRatioX / (1 + SingTripRatioX))
+      return_time = tau1 * -log(RandomGen::rndm()->rand_uniform());
+    else return_time = tau3 * -log(RandomGen::rndm()->rand_uniform());
   }
   
   return return_time;
   
 }
 
-photonstream NESTcalc::GetPhotonTimes(/*inputs*/){
+photonstream NESTcalc::GetPhotonTimes(INTERACTION_TYPE species, QuantaResult result){
   
-  //TODO by MATTHEW
+  
   photonstream return_photons;
-  return_photons.push_back(PhotonTime(beta,true));//example line, modify
+  for (int ip = 0; ip < result.photons; ++ip) {
+    bool isExciton = false;///TODO by MATTHEW
+    return_photons.push_back(PhotonTime(species,isExciton));
+  }
+  
   return return_photons;
   
 }
@@ -150,7 +106,7 @@ QuantaResult NESTcalc::GetQuanta ( YieldResult yields, double density ) {
     Fano = 0.12707-0.029623*density- //Fano factor is  << 1
       0.0057042*pow(density,2.)+ //~0.1 for GXe w/ formula from Bolotnikov et al. 1995
       0.0015957*pow(density,3.); //to get it to be ~0.03 for LXe (E Dahl Ph.D. thesis)
-    Nq_actual = int(floor(rand_gauss(Nq_mean,sqrt(Fano*Nq_mean))+0.5));
+    Nq_actual = int(floor(RandomGen::rndm()->rand_gauss(Nq_mean,sqrt(Fano*Nq_mean))+0.5));
     if ( Nq_actual < 0 || Nq_mean == 0. ) Nq_actual = 0;
     
     Ni = BinomFluct(Nq_actual,alf);
@@ -160,8 +116,8 @@ QuantaResult NESTcalc::GetQuanta ( YieldResult yields, double density ) {
   
   else {
     
-    Ni = int(floor(rand_gauss(Nq_mean*alf,sqrt(Fano*Nq_mean*alf))+0.5)); if(Ni<0)Ni=0;
-    Nex= int(floor(rand_gauss(Nq_mean*NexONi*alf,sqrt(Fano*Nq_mean*NexONi*alf))+0.5)); if(Nex<0)Nex=0;
+    Ni = int(floor(RandomGen::rndm()->rand_gauss(Nq_mean*alf,sqrt(Fano*Nq_mean*alf))+0.5)); if(Ni<0)Ni=0;
+    Nex= int(floor(RandomGen::rndm()->rand_gauss(Nq_mean*NexONi*alf,sqrt(Fano*Nq_mean*NexONi*alf))+0.5)); if(Nex<0)Nex=0;
     Nq_actual = Nex + Ni;
     
   }
@@ -180,14 +136,16 @@ QuantaResult NESTcalc::GetQuanta ( YieldResult yields, double density ) {
   if ( recombProb > 1. ) recombProb = 1.;
   
   double ef = yields.ElectricField;
-  double cc = 0.3+(2.419110e-2-0.3)/(1.+pow(ef/1.431556e4,0.5)), bb = 0.54;
+  double cc = 0.3+(2.419110e-2-0.3)/(1.+pow(ef/1.431556e4,0.5));
+  double bb = 0.54;
   double aa = cc/pow(1.-bb,2.);
   double omega = -aa*pow(recombProb-bb,2.)+cc;
   if ( omega < 0.0 ) omega = 0.0;
   
-  if ( yields.Lindhard < 1. ) omega = 0.04*exp(-pow(elecFrac-0.5,2.)/0.17);
+  if ( yields.Lindhard < 1. )
+    omega = 0.04*exp(-pow(elecFrac-0.5,2.)/0.17);
   double Variance = recombProb*(1.-recombProb)*Ni+omega*omega*Ni*Ni;
-  Ne = int(floor(rand_gauss((1.-recombProb)*Ni,sqrt(Variance))+0.5));
+  Ne=int(floor(RandomGen::rndm()->rand_gauss((1.-recombProb)*Ni,sqrt(Variance))+0.5));
   if ( Ne < 0 ) Ne = 0;
   if ( Ne > Ni) Ne =Ni;
   
@@ -208,7 +166,7 @@ QuantaResult NESTcalc::GetQuanta ( YieldResult yields, double density ) {
 YieldResult NESTcalc::GetYields ( INTERACTION_TYPE species, double energy, double density,
 				  double dfield, double massNum, double atomNum, vector<double> NuisParam ) {
   
-  const double m3 = 2., m4 = 2., m6 = 0.;
+  
   double Ne = -999; double Nph = -999; double NexONi = -999; double m8 = 2., L = 1.;
   const double deltaT_ns_halflife = 154.4;
   
@@ -224,8 +182,9 @@ YieldResult NESTcalc::GetYields ( INTERACTION_TYPE species, double energy, doubl
     {
       int massNumber; double ScaleFactor[2] = { 1., 1. };
       if ( massNum != 0. ) massNumber = int(massNum);
-      else massNumber = SelectRanXeAtom ( rand_uniform() * 100.0 );
-      ScaleFactor[0] = sqrt(MOLAR_MASS/(double)massNumber); ScaleFactor[1] = ScaleFactor[0];
+      else massNumber = RandomGen::rndm()->SelectRanXeAtom();
+      ScaleFactor[0] = sqrt(MOLAR_MASS/(double)massNumber);
+      ScaleFactor[1] = ScaleFactor[0];
       Nq = 12.6 * pow ( energy, 1.05 );
       ThomasImel = 0.0522*pow(dfield,-0.0694)*pow(density/2.9,0.3);
       Qy = 1. / (ThomasImel*sqrt(energy+9.75));
@@ -237,7 +196,7 @@ YieldResult NESTcalc::GetYields ( INTERACTION_TYPE species, double energy, doubl
     } break;
   case ion:
     {
-      double A1 = massNum, A2 = SelectRanXeAtom(rand_uniform()*100.);
+      double A1 = massNum, A2 = RandomGen::rndm()->SelectRanXeAtom();
       double Z1 = atomNum, Z2 = ATOM_NUM;
       double Z_mean = pow(pow(Z1,(2./3.))+pow(Z2,(2./3.)),1.5);
       double E1c = pow(A1,3.)*pow(A1+A2,-2.)*pow(Z_mean,(4./3.))*pow(Z1,(-1./3.))*500.;
@@ -254,13 +213,14 @@ YieldResult NESTcalc::GetYields ( INTERACTION_TYPE species, double energy, doubl
       double fieldDep= pow ( 1.+pow ( dfield/95., 8.7 ), 0.0592 );
       if ( density < 1. ) fieldDep = sqrt ( dfield );
       ThomasImel = 0.00625 * massDep / ( 1. + densDep ) / fieldDep;
-      Wq_eV = 28.259+25.667*log10(density)
-	-33.611*pow(log10(density),2.)
-	-123.73*pow(log10(density),3.)
-	-136.47*pow(log10(density),4.)
-	-74.194*pow(log10(density),5.)
-	-20.276*pow(log10(density),6.)
-	-2.2352*pow(log10(density),7.);
+      const double logden = log10(density);
+      Wq_eV = 28.259+25.667*logden
+	-33.611*pow(logden,2.)
+	-123.73*pow(logden,3.)
+	-136.47*pow(logden,4.)
+	-74.194*pow(logden,5.)
+	-20.276*pow(logden,6.)
+	-2.2352*pow(logden,7.);
       alpha = 0.64 / pow ( 1. + pow ( density / 10., 2. ), 449.61 );
       NexONi = alpha + 0.00178 * pow ( atomNum, 1.587 );
       Nq = 1e3 * L * energy / Wq_eV;
@@ -270,6 +230,7 @@ YieldResult NESTcalc::GetYields ( INTERACTION_TYPE species, double energy, doubl
     } break;
   case gammaRay:
     {
+      const double m3 = 2., m4 = 2., m6 = 0.;
       double m1 = 33.951 + (3.3284 - 33.951) / (1. + pow(dfield / 165.34, .72665));
       double m2 = 1000 / Wq_eV;
       double m5 = 23.156 + (10.737 - 23.156) / (1. + pow(dfield / 34.195, .87459));
@@ -286,7 +247,7 @@ YieldResult NESTcalc::GetYields ( INTERACTION_TYPE species, double energy, doubl
   case Kr83m:
     {
       if ( energy == 9.4 ) {
-	double deltaT_ns = rand_exponential ( deltaT_ns_halflife );
+	double deltaT_ns = RandomGen::rndm()->rand_exponential ( deltaT_ns_halflife );
 	Nq = energy * ( 1e3 / Wq_eV + 6.5 );
 	double medTlevel = 47.8 + ( 69.201 - 47.8 ) / pow ( 1. + pow ( dfield / 250.13, 0.9 ), 1. );
 	double highTrise = 1.15 + ( 1. - 1.15 ) / ( 1. + pow ( deltaT_ns / 1200., 18. ) );
@@ -339,16 +300,13 @@ YieldResult NESTcalc::GetYields ( INTERACTION_TYPE species, double energy, doubl
   
 }
 
-void NESTcalc::SetRandomSeed ( unsigned long int s ) {
-  
-  rng.seed(s);
-  
+NESTcalc::NESTcalc ( ) {
+
 }
 
-NESTcalc::NESTcalc ( ) {
-  
-  rng.seed(0);
-  
+NESTcalc::NESTcalc (VDetector* detector) {
+	NESTcalc();
+	fdetector = detector;
 }
 
 vector<double> NESTcalc::GetS1 ( int Nph, double dx, double dy,
@@ -356,50 +314,52 @@ vector<double> NESTcalc::GetS1 ( int Nph, double dx, double dy,
   
   vector<double> scintillation(9);  // return vector
   vector<double> newSpike(2); // for re-doing spike counting more precisely
-
+  
   // Add some variability in g1 drawn from a polynomial spline fit
-  double posDep = FitS1 ( dx, dy, dz );
-  double dt = ( TopDrift - dz ) / driftVelocity;
-  double dz_center = TopDrift - dV_mid * dtCntr; //go from t to z
-  posDep /= FitS1 ( 0., 0., dz_center ); // XYZ always in mm now never cm
+  double posDep = fdetector->FitS1( dx, dy, dz );
+  double dt = ( fdetector->get_TopDrift() - dz ) / driftVelocity;
+  double dz_center = fdetector->get_TopDrift() - dV_mid * fdetector->get_dtCntr(); //go from t to z
+  posDep /= fdetector->FitS1( 0., 0., dz_center ); // XYZ always in mm now never cm
   
   // generate a number of PMT hits drawn from a binomial distribution. Initialize number of photo-electrons
-  int nHits=BinomFluct(Nph,g1*posDep), Nphe = 0;
+  int nHits=BinomFluct(Nph,fdetector->get_g1()*posDep), Nphe = 0;
   
   // Initialize the pulse area and spike count variables
   double pulseArea = 0., spike = 0., prob;
   
   // If single photo-electron efficiency is under 1 and the threshold is above 0 (some phe will be below threshold)
-  if ( sPEthr > 0. && nHits < numPMTs ) { // digital nHits eventually becomes spikes (spike++) based upon threshold
+	if ( fdetector->get_sPEthr() > 0. && nHits < fdetector->get_numPMTs() ) { // digital nHits eventually becomes spikes (spike++) based upon threshold
     // Step through the pmt hits
     for ( int i = 0; i < nHits; i++ ) {
       // generate photo electron, integer count and area
-      double phe1 = rand_gauss(1.,sPEres) + rand_gauss(noise[0],noise[1]); Nphe++; if(phe1>DBL_MAX)phe1=1.;if(phe1<-DBL_MAX)phe1=0.;
-      prob = rand_uniform();
+      double phe1 = RandomGen::rndm()->rand_gauss(1., fdetector->get_sPEres()) + RandomGen::rndm()->rand_gauss(fdetector->get_noise()[0], fdetector->get_noise()[1]); 
+			Nphe++; if(phe1>DBL_MAX)phe1=1.;if(phe1<-DBL_MAX)phe1=0.;
+      prob = RandomGen::rndm()->rand_uniform();
       // zero the area if random draw determines it wouldn't have been observed.
-      if ( prob > sPEeff ) { phe1 = 0.; } //add an else with Nphe++ if not doing mc truth
+      if ( prob > fdetector->get_sPEeff() ) { phe1 = 0.; } //add an else with Nphe++ if not doing mc truth
       // Generate a double photo electron if random draw allows it
       double phe2 = 0.;
-      if ( rand_uniform() < P_dphe ) {
+      if ( RandomGen::rndm()->rand_uniform() < fdetector->get_P_dphe() ) {
 	// generate area and increment the photo-electron counter
-	phe2 = rand_gauss(1.,sPEres) + rand_gauss(noise[0],noise[1]); Nphe++; if(phe2>DBL_MAX)phe2=1.;if(phe2<-DBL_MAX)phe2=0.;
+	phe2 = RandomGen::rndm()->rand_gauss(1., fdetector->get_sPEres()) + RandomGen::rndm()->rand_gauss(fdetector->get_noise()[0], fdetector->get_noise()[1]); 
+	Nphe++; if(phe2>DBL_MAX)phe2=1.;if(phe2<-DBL_MAX)phe2=0.;
 	// zero the area if phe wouldn't have been observed
-	if ( rand_uniform() > sPEeff && prob > sPEeff ) { phe2 = 0.; } //add an else with Nphe++ if not doing mc truth
+	if ( RandomGen::rndm()->rand_uniform() > fdetector->get_sPEeff() && prob > fdetector->get_sPEeff() ) { phe2 = 0.; } //add an else with Nphe++ if not doing mc truth
 	// The dphe occurs simultaneously to the first one from the same source photon. If the first one is seen, so should be the second one
       }
       // Save the phe area and increment the spike count (very perfect spike count) if area is above threshold
-      if ( (phe1+phe2) > sPEthr ) { spike++; pulseArea += phe1 + phe2; }
+      if ( (phe1+phe2) > fdetector->get_sPEthr() ) { spike++; pulseArea += phe1 + phe2; }
     }
   }
   else { // apply just an empirical efficiency by itself, without direct area threshold
-    Nphe = nHits + BinomFluct(nHits,P_dphe); double eff=sPEeff; if(nHits>=numPMTs) eff=1.;
-    pulseArea = rand_gauss(BinomFluct(Nphe,1.-(1.-eff)/(1.+P_dphe)),sPEres*sqrt(Nphe));
+    Nphe = nHits + BinomFluct(nHits,fdetector->get_P_dphe()); double eff=fdetector->get_sPEeff(); if(nHits>=fdetector->get_numPMTs()) eff=1.;
+    pulseArea = RandomGen::rndm()->rand_gauss(BinomFluct(Nphe,1.-(1.-eff)/(1.+fdetector->get_P_dphe())),fdetector->get_sPEres()*sqrt(Nphe));
     spike = (double)nHits;
   }
   if ( pulseArea < 0. ) pulseArea = 0.;
   double pulseAreaC= pulseArea / posDep;
-  double Nphd = pulseArea / (1.+P_dphe);
-  double NphdC= pulseAreaC/ (1.+P_dphe);
+  double Nphd = pulseArea / (1.+fdetector->get_P_dphe());
+  double NphdC= pulseAreaC/ (1.+fdetector->get_P_dphe());
   double spikeC = spike / posDep;
   
   scintillation[0] = nHits; scintillation[1] = Nphe; //MC-true integer hits in same OR different PMTs, first without then with double phe's (Nphe > nHits)
@@ -407,34 +367,34 @@ vector<double> NESTcalc::GetS1 ( int Nph, double dx, double dy,
   scintillation[4] = Nphd; scintillation[5] = NphdC; //same as pulse areas except adjusted *downward* by constant for average 2-PE effect. (LUX phd units)
   scintillation[6] = spike; scintillation[7] = spikeC; //uncorrected and pos-corrected spike counts, both floats, but made more accurate later in GetSpike
   
-  if ( spike < coinLevel ) //no chance of meeting coincidence requirement. Here, spike is still "perfect" (integer)
+  if ( spike < fdetector->get_coinLevel() ) //no chance of meeting coincidence requirement. Here, spike is still "perfect" (integer)
     prob = 0.;
   else {
     if ( spike > 10. ) prob = 1.;
     else {
-      if ( coinLevel == 0 ) prob = 1.;
-      else if ( coinLevel == 1 ) {
+      if ( fdetector->get_coinLevel() == 0 ) prob = 1.;
+      else if ( fdetector->get_coinLevel() == 1 ) {
         if ( spike >= 1. ) prob = 1.;
         else prob = 0.;
       }
-      else if ( coinLevel == 2 ) prob = 1.-pow((double)numPMTs,1.-spike);
+      else if ( fdetector->get_coinLevel() == 2 ) prob = 1.-pow((double)fdetector->get_numPMTs(),1.-spike);
       else {
         double numer = 0., denom = 0.;
         for ( int i = spike; i > 0; i-- ) {
-          denom += nCr ( numPMTs, i );
-          if ( i >= coinLevel ) numer += nCr ( numPMTs, i );
+          denom += nCr ( fdetector->get_numPMTs(), i );
+          if ( i >= fdetector->get_coinLevel() ) numer += nCr ( fdetector->get_numPMTs(), i );
 	}
         prob = numer / denom;
       } //end of case of coinLevel of 3 or higher
     } // end of case of spike is equal to 9 or lower
   } //the end of case of spike >= coinLevel
- 
+  
   //newSpike = GetSpike ( Nph, dx, dy, dz, driftVelocity, dV_mid, scintillation ); // over-write spike with smeared version, ~real data
-  newSpike = GetSpikeRun4 ( Nph, dx, dy, dz, driftVelocity, dV_mid, type_num ); // over-write spike with smeared version, ~real data
+  newSpike = GetSpikeRun4 ( nHits, dx, dy, dz, driftVelocity, dV_mid, type_num ); // over-write spike with smeared version, ~real data
   scintillation[6] = newSpike[0]; // uncorr
   scintillation[7] = newSpike[1]; // 3-D corr spike RQ
   
-  if ( rand_uniform() < prob ) // coincidence has to happen in different PMTs
+  if ( RandomGen::rndm()->rand_uniform() < prob ) // coincidence has to happen in different PMTs
     { ; }
   else { // some of these are set to -1 to flag them as having been below threshold
     scintillation[0] *= -1.; if ( scintillation[0] == 0. ) scintillation[0] = -DBL_MIN;
@@ -447,70 +407,69 @@ vector<double> NESTcalc::GetS1 ( int Nph, double dx, double dy,
     scintillation[7] *= -1.; if ( scintillation[7] == 0. ) scintillation[7] = -DBL_MIN;
   }
   
-  scintillation[8] =g1;
+  scintillation[8] = fdetector->get_g1();
   
   return scintillation;
   
 }
 
-vector<double> NESTcalc::GetS2 ( int Ne, double dx, double dy, double dt,
-				 double driftVelocity, bool IsInGasPhase ) {
+vector<double> NESTcalc::GetS2 ( int Ne, double dx, double dy, double dt, double driftVelocity ) {
   
   vector<double> ionization(9);
   double alpha = 0.137, beta = 177., gamma = 45.7;
   double epsilonRatio = 1.85 / 1.00126;
-  if ( IsInGasPhase ) epsilonRatio = 1.;
+  if ( fdetector->get_inGas() ) epsilonRatio = 1.;
   
   // Add some variability in g1_gas drawn from a polynomial spline fit
-  double posDep = FitS2 ( dx, dy ); // XY is always in mm now, never cm
-  posDep /= FitS2 ( 0., 0. );
-  double dz = TopDrift - dt * driftVelocity;
+  double posDep = fdetector->FitS2( dx, dy ); // XY is always in mm now, never cm
+  posDep /= fdetector->FitS2( 0., 0. );
+  double dz = fdetector->get_TopDrift() - dt * driftVelocity;
   
-  double E_liq = E_gas / epsilonRatio; //kV per cm
+  double E_liq = fdetector->get_E_gas() / epsilonRatio; //kV per cm
   double ExtEff = -0.03754*pow(E_liq,2.)+0.52660*E_liq-0.84645; // arXiv:1710.11032
-  if ( ExtEff > 1. || IsInGasPhase ) ExtEff = 1.;
+  if ( ExtEff > 1. || fdetector->get_inGas() ) ExtEff = 1.;
   if ( ExtEff < 0. ) ExtEff = 0.;
-  int Nee = BinomFluct(Ne,ExtEff*exp(-dt/eLife_us)); //MAKE this 1 for SINGLE e- DEBUGGING
+  int Nee = BinomFluct(Ne,ExtEff*exp(-dt/fdetector->get_eLife_us())); //MAKE this 1 for SINGLE e- DEBUGGING
   
-  double elYield = (alpha*E_gas*1e3-beta*p_bar-gamma)* // arXiv:1207.2292
-    ( anode - TopDrift ) * 0.1; //EL gap in mm -> cm, affecting S2 size linearly
-  if ( (anode - TopDrift) <= 0. ) {
+  double elYield = (alpha*fdetector->get_E_gas()*1e3-beta*fdetector->get_p_bar()-gamma)* // arXiv:1207.2292
+    ( fdetector->get_anode() - fdetector->get_TopDrift() ) * 0.1; //EL gap in mm -> cm, affecting S2 size linearly
+  if ( (fdetector->get_anode() - fdetector->get_TopDrift()) <= 0. ) {
     cerr << "\tERR: The gas gap in the S2 calculation broke!!!!" << endl;
   }
-  long Nph = long(floor(rand_gauss(elYield*double(Nee),
-				   sqrt(s2Fano*elYield*double(Nee)))+0.5));
-  int nHits = BinomFluct(Nph,g1_gas);
-  int Nphe = nHits + BinomFluct(nHits,P_dphe);
-  double pulseArea=rand_gauss(Nphe,sPEres*sqrt(Nphe));
-  double pulseAreaC= pulseArea/exp(-dt/eLife_us);
-  double Nphd = pulseArea / (1.+P_dphe);
-  double NphdC= pulseAreaC/ (1.+P_dphe);
+  long Nph = long(floor(RandomGen::rndm()->rand_gauss(elYield*double(Nee),
+				   sqrt(fdetector->get_s2Fano()*elYield*double(Nee)))+0.5));
+  long nHits = BinomFluct(Nph,fdetector->get_g1_gas());
+  long Nphe = nHits + BinomFluct(nHits,fdetector->get_P_dphe());
+  double pulseArea=RandomGen::rndm()->rand_gauss(Nphe,fdetector->get_sPEres()*sqrt(Nphe));
+  double pulseAreaC= pulseArea/exp(-dt/fdetector->get_eLife_us());
+  double Nphd = pulseArea / (1.+fdetector->get_P_dphe());
+  double NphdC= pulseAreaC/ (1.+fdetector->get_P_dphe());
   
-  double S2b = rand_gauss(S2botTotRatio*pulseArea,sqrt(S2botTotRatio*pulseArea*(1.-S2botTotRatio)));
-  double S2bc= S2b / exp(-dt/eLife_us); // for detectors using S2 bottom-only in their analyses
+  double S2b = RandomGen::rndm()->rand_gauss(fdetector->get_S2botTotRatio()*pulseArea,sqrt(fdetector->get_S2botTotRatio()*pulseArea*(1.-fdetector->get_S2botTotRatio())));
+  double S2bc= S2b / exp(-dt/fdetector->get_eLife_us()); // for detectors using S2 bottom-only in their analyses
   
   ionization[0] = Nee; ionization[1] = Nph; //integer number of electrons unabsorbed in liquid then getting extracted, followed by raw number of photons produced in the gas gap
   ionization[2] = nHits; ionization[3] = Nphe; //identical definitions to GetS1 follow, see above, except no spike, as S2 too big generally. S2 has more steps than S1 (e's 1st)
-  if ( s2_thr >= 0 ) {
+  if ( fdetector->get_s2_thr() >= 0 ) {
     ionization[4] = pulseArea; ionization[5] = pulseAreaC;
     ionization[6] = Nphd; ionization[7] = NphdC;
   }
   else { // the negative threshold is a polymorphic hidden feature: allows for header switching from total S2 to S2 bottom; doesn't mean literally negative, nor below threshold
     ionization[4] = S2b; ionization[5] = S2bc;
-    ionization[6] = S2b / (1.+P_dphe); ionization[7] = S2bc / (1.+P_dphe);
+    ionization[6] = S2b / (1.+fdetector->get_P_dphe()); ionization[7] = S2bc / (1.+fdetector->get_P_dphe());
   }
   
-  if(pulseArea<fabs(s2_thr)) for(int i=0;i<8;i++) { ionization[i]*=-1.; if(ionization[i]==0.)ionization[i]=-DBL_MIN; }
+  if(pulseArea<fabs(fdetector->get_s2_thr())) for(int i=0;i<8;i++) { ionization[i]*=-1.; if(ionization[i]==0.)ionization[i]=-DBL_MIN; }
   
-  double SE = elYield* g1_gas;
+  double SE = elYield* fdetector->get_g1_gas();
   double g2 = ExtEff * SE;
-  if ( s2_thr < 0 )
-    g2 *= S2botTotRatio;
+  if ( fdetector->get_s2_thr() < 0 )
+    g2 *= fdetector->get_S2botTotRatio();
   ionization[8]=g2;
   
   if ( !dx && !dy && !dt && Ne == 1 ) {
-    cout << endl << "g1 = " << g1 << " phd per photon\tg2 = " << g2 << " phd per electron (e-EE = ";
-    cout << ExtEff*100. << "%, while SE_mean = " << SE << ")\t"<<endl;
+    cout << endl << "g1 = " << fdetector->get_g1() << " phd per photon\tg2 = " << g2 << " phd per electron (e-EE = ";
+    cout << ExtEff*100. << "%, while SE_mean = " << SE << ")\t";
   }
   
   return ionization;
@@ -530,50 +489,6 @@ double NESTcalc::nCr ( double n, double r ) {
   
 }
 
-DetectorParameters NESTcalc::GetDetector ( double xPos_mm, double yPos_mm, double zPos_mm,
-					   bool IsInGasPhase ) {
-  
-  
-  DetectorParameters detParam;
-  vector<double> secondary(9);
-  
-  detParam.temperature = T_Kelvin;
-  detParam.pressure = p_bar;
-  detParam.GXeInterface = TopDrift;
-  detParam.efFit = FitEF ( xPos_mm, yPos_mm, zPos_mm );
-  detParam.rad = radius;
-  detParam.dtExtrema[0] = dt_min;
-  detParam.dtExtrema[1] = dt_max;
-  
-  if ( xPos_mm == 0. &&
-       yPos_mm == 0. &&
-       zPos_mm == detParam.GXeInterface / 2. ) {
-    secondary = GetS2 ( 1, 0., 0., 0., 1., IsInGasPhase );
-  }
-  
-  return detParam; //everything needed for testNEST to work
-  
-}
-
-void NESTcalc::DriftRangeOverride ( double drift_low, double drift_high, DetectorParameters &detParam ) {
-  
-  // Grab previous drift time range in detector parameters
-  double prev_dt_min = detParam.dtExtrema[0];
-  double prev_dt_max = detParam.dtExtrema[1];
-  
-  // Reset drift time minimum and maximum
-  detParam.dtExtrema[0] = drift_low;
-  detParam.dtExtrema[1] = drift_high;
-  
-  // Ensure that we are not setting the new drift range outside the bounds of the previously set values.
-  // This is the safest way to implement, so that we aren't working outside the bounds of the detector settings file.
-  if (detParam.dtExtrema[0] < prev_dt_min || detParam.dtExtrema[1] > prev_dt_max || detParam.dtExtrema[0] > detParam.dtExtrema[1]) {
-    cerr << "*** New drift time range completely outside of original fiducial! ***" << endl;
-    exit(1);
-  }
-  
-}
-
 vector<double> NESTcalc::GetSpike ( int Nph, double dx, double dy, double dz,
   double driftSpeed, double dS_mid, vector<double> oldScint ) {
   
@@ -584,22 +499,21 @@ vector<double> NESTcalc::GetSpike ( int Nph, double dx, double dy, double dz,
     return newSpike;
   }
   newSpike[0] = fabs(oldScint[6]);
-  newSpike[0] = rand_gauss(newSpike[0],(sPEres/4.)*sqrt(newSpike[0]));
+  newSpike[0] = RandomGen::rndm()->rand_gauss(newSpike[0],(fdetector->get_sPEres()/4.)*sqrt(newSpike[0]));
   if ( newSpike[0] < 0.0 ) newSpike[0] = 0.0;
-  newSpike[1] = newSpike[0] / FitS1 ( dx, dy, dz ) * FitS1 ( 0., 0., TopDrift - dS_mid * dtCntr );
+  newSpike[1] = newSpike[0] / fdetector->FitS1( dx, dy, dz ) * fdetector->FitS1( 0., 0., fdetector->get_TopDrift() - dS_mid * fdetector->get_dtCntr() );
   
   return newSpike; // regular and position-corrected spike counts returned
   
 }
 
-vector<double> NESTcalc::GetSpikeRun4 ( int Nph, double dx, double dy, double dz,
+vector<double> NESTcalc::GetSpikeRun4 ( int nHits, double dx, double dy, double dz,
   double driftSpeed, double dS_mid, INTERACTION_TYPE species ) {
   
 	// Output spike variables
 	vector<double> newSpike(2);
 	
-	// NOTE: "Nph" here is the number of hits, not the 
-	int numSpikesTop, numSpikesBot, nHits;
+	int numSpikesTop, numSpikesBot;
 	int S1spike_raw;
 	double S1spike_OLc;
 	double numPHETop, numPHEBot;
@@ -610,8 +524,8 @@ vector<double> NESTcalc::GetSpikeRun4 ( int Nph, double dx, double dy, double dz
 	const double coinWind = 100.; //S1 concidence window in ns
 	const double spEff_Run4 = 0.3;
 
-	numPHETop = (double) BinomFluct(Nph, topArrayProbabilityCoeffs[0]*pow(dS_mid,2.) + topArrayProbabilityCoeffs[1]*dS_mid + topArrayProbabilityCoeffs[2]);
-	numPHEBot = (double) Nph - numPHETop;
+	numPHETop = (double) BinomFluct(nHits, topArrayProbabilityCoeffs[0]*pow(dS_mid,2.) + topArrayProbabilityCoeffs[1]*dS_mid + topArrayProbabilityCoeffs[2]);
+	numPHEBot = (double) nHits - numPHETop;
 
 	// Do various checks on the number of PHE in the top and bottom arrays,
 	// and obtain the RAW/UNCORRECTED number of spikes in top and bottom array
@@ -624,7 +538,7 @@ vector<double> NESTcalc::GetSpikeRun4 ( int Nph, double dx, double dy, double dz
 	else {
 		if (numPHETop < 2) numSpikesTop = numPHETop;
 		else {
-			numSpikesTop = (int) floor( rand_gauss(spikes_S1[int(numPHETop)-2], sdev_spikes_S1[int(numPHETop)-2]) + 0.5 );
+			numSpikesTop = (int) floor( RandomGen::rndm()->rand_gauss(spikes_S1[int(numPHETop)-2], sdev_spikes_S1[int(numPHETop)-2]) + 0.5 );
 			if (numSpikesTop > numPHETop) numSpikesTop = numPHETop;
 			if (numSpikesTop > 80) {
 				//cerr << "Number of spikes in top array exceeds the allowed number. " <<
@@ -635,7 +549,7 @@ vector<double> NESTcalc::GetSpikeRun4 ( int Nph, double dx, double dy, double dz
 		}
 		if (numPHEBot < 2) numSpikesBot = numPHEBot;
 		else {
-			numSpikesBot = (int) floor( rand_gauss(spikes_S1[int(numPHEBot)-2], sdev_spikes_S1[int(numPHEBot)-2]) + 0.5 );
+			numSpikesBot = (int) floor( RandomGen::rndm()->rand_gauss(spikes_S1[int(numPHEBot)-2], sdev_spikes_S1[int(numPHEBot)-2]) + 0.5 );
 			if (numSpikesBot > numPHEBot) numSpikesBot = numPHEBot;
 			if (numSpikesBot > 80) {
 				//cerr << "Number of spikes in bottom array exceeds the allowed number. " <<
@@ -648,62 +562,60 @@ vector<double> NESTcalc::GetSpikeRun4 ( int Nph, double dx, double dy, double dz
 	// Get the total number of RAW/UNCORRECTED spikes
 	S1spike_raw = numSpikesTop + numSpikesBot;
 
+	
 	// If there is a non-zero coincidence requirement, proceed
-	if ( coinLevel ) {
+	if ( fdetector->get_coinLevel() ) {
 		S1Top = 0.;
 		S1Bot = 0.;
-		nHits = 0;
 		// Check interaction type to deduce time constant
 		if ( species == NR ) stRatio = 1.6;
 		else stRatio = 0.6;
 		
 		for ( int i = 0; i < (int) floor(numPHETop); i++ ) {
-			double phe1 = rand_gauss(1., sPEres);
-			if ( phe1 < 0.0 || rand_uniform() > sPEeff ) phe1 = 0.;
+			double phe1 = RandomGen::rndm()->rand_gauss(1., fdetector->get_sPEres());
+			if ( phe1 < 0.0 || RandomGen::rndm()->rand_uniform() > fdetector->get_sPEeff() ) phe1 = 0.;
 			double phe2 = 0.;
-			if ( rand_uniform() < P_dphe ) {
-				phe2 = rand_gauss(1., sPEres);
-				if ( phe2 < 0.0 || rand_uniform() > sPEeff ) phe2 = 0.;
+			if ( RandomGen::rndm()->rand_uniform() < fdetector->get_P_dphe() ) {
+				phe2 = RandomGen::rndm()->rand_gauss(1., fdetector->get_sPEres());
+				if ( phe2 < 0.0 || RandomGen::rndm()->rand_uniform() > fdetector->get_sPEeff() ) phe2 = 0.;
 			}
 			
-			if ( rand_uniform() < (stRatio/(1.+stRatio)) ) tau = 3.1;
+			if ( RandomGen::rndm()->rand_uniform() < (stRatio/(1.+stRatio)) ) tau = 3.1;
 			else tau = 24.;
 
 			// spEff has units of phd, but before correcting from VUV v1.1 to v1.2
-			if ( (phe1+phe2)*vuv1_1to1_2 > spEff_Run4 && rand_exponential(tau) < coinWind ) {
+			if ( (phe1+phe2)*vuv1_1to1_2 > spEff_Run4 && RandomGen::rndm()->rand_exponential(tau) < coinWind ) {
 				S1Top += (phe1+phe2);
-				nHits++;
 			}
 		}
 
 		for ( int i = 0; i < (int) floor(numPHEBot); i++ ) {
-			double phe1 = rand_gauss(1., sPEres);
-			if ( phe1 < 0.0 || rand_uniform() > sPEeff ) phe1 = 0.;
+			double phe1 = RandomGen::rndm()->rand_gauss(1., fdetector->get_sPEres());
+			if ( phe1 < 0.0 || RandomGen::rndm()->rand_uniform() > fdetector->get_sPEeff() ) phe1 = 0.;
 			double phe2 = 0.;
-			if ( rand_uniform() < P_dphe ) {
-				phe2 = rand_gauss(1., sPEres);
-				if ( phe2 < 0.0 || rand_uniform() > sPEeff ) phe2 = 0.;
+			if ( RandomGen::rndm()->rand_uniform() < fdetector->get_P_dphe() ) {
+				phe2 = RandomGen::rndm()->rand_gauss(1., fdetector->get_sPEres());
+				if ( phe2 < 0.0 || RandomGen::rndm()->rand_uniform() > fdetector->get_sPEeff() ) phe2 = 0.;
 			}
 
-			if ( rand_uniform() < (stRatio/(1.+stRatio)) ) tau = 3.1;
+			if ( RandomGen::rndm()->rand_uniform() < (stRatio/(1.+stRatio)) ) tau = 3.1;
 			else tau = 24.;
 
 			// spEff has units of phd, but before correcting from VUV v1.1 to v1.2
-			if ( (phe1+phe2)*vuv1_1to1_2 > spEff_Run4 && rand_exponential(tau) < coinWind ) {
+			if ( (phe1+phe2)*vuv1_1to1_2 > spEff_Run4 && RandomGen::rndm()->rand_exponential(tau) < coinWind ) {
 				S1Bot += (phe1+phe2);
-				nHits++;
 			}
 		}
 		// Correct for double-PE effect
-		S1Top /= (1.+P_dphe);
-		S1Bot /= (1.+P_dphe);
+		S1Top /= (1.+fdetector->get_P_dphe());
+		S1Bot /= (1.+fdetector->get_P_dphe());
 	}
 	// If there is no coincidence requirement, simply calculate fluctuated number of PHE in top and bottom
 	else {
-		numPHETop += BinomFluct(numPHETop, P_dphe);
-		numPHEBot += BinomFluct(numPHEBot, P_dphe);
-		S1Top = rand_gauss(numPHETop, sPEres*sqrt(numPHETop))/(1.+P_dphe);
-		S1Bot = rand_gauss(numPHEBot, sPEres*sqrt(numPHEBot))/(1.+P_dphe);
+		numPHETop += BinomFluct(numPHETop, fdetector->get_P_dphe());
+		numPHEBot += BinomFluct(numPHEBot, fdetector->get_P_dphe());
+		S1Top = RandomGen::rndm()->rand_gauss(numPHETop, fdetector->get_sPEres()*sqrt(numPHETop))/(1.+fdetector->get_P_dphe());
+		S1Bot = RandomGen::rndm()->rand_gauss(numPHEBot, fdetector->get_sPEres()*sqrt(numPHEBot))/(1.+fdetector->get_P_dphe());
 	}
 
 	// Implement spike count correction based on lookup tables (TOP array)
@@ -724,34 +636,9 @@ vector<double> NESTcalc::GetSpikeRun4 ( int Nph, double dx, double dy, double dz
 	S1spike_OLc = (spikeCountCorrectionTop*double(numSpikesTop) + spikeCountCorrectionBot*double(numSpikesBot))*1.015;
 	//newSpike[0] = (double) S1spike_raw; // use if you want the uncorrected spike count to NOT include Tomasz's correction
 	newSpike[0] = S1spike_OLc; // non-position corrected (but spike-corrected) spike count
-  newSpike[1] = S1spike_OLc / FitS1 ( dx, dy, dz ) * FitS1 ( 0., 0., TopDrift - dS_mid * dtCntr ); // with position corrections
-  
+  newSpike[1] = S1spike_OLc / fdetector->FitS1( dx, dy, dz ) * fdetector->FitS1( 0., 0., fdetector->get_TopDrift() - dS_mid * fdetector->get_dtCntr() ); // with position corrections
+ 
 	return newSpike; // regular and position-corrected spike counts returned
-}
-
-int NESTcalc::SelectRanXeAtom ( double isotope ) {
-  
-  int A;
-  if ( isotope > 0.000 && isotope <= 0.090 )
-    A = 124;
-  else if ( isotope > 0.090 && isotope <= 0.180 )
-    A = 126;
-  else if ( isotope > 0.180 && isotope <= 2.100 )
-    A = 128;
-  else if ( isotope > 2.100 && isotope <= 28.54 )
-    A = 129;
-  else if ( isotope > 28.54 && isotope <= 32.62 )
-    A = 130;
-  else if ( isotope > 32.62 && isotope <= 53.80 )
-    A = 131;
-  else if ( isotope > 53.80 && isotope <= 80.69 )
-    A = 132;
-  else if ( isotope > 80.69 && isotope <= 91.13 )
-    A = 134;
-  else
-    A = 136;
-  return A;
-
 }
 
 double NESTcalc::SetDensity ( double Kelvin, double bara ) { // currently only for fixed pressure (saturated vapor pressure); will add pressure dependence later
@@ -863,28 +750,24 @@ double NESTcalc::SetDriftVelocity_MagBoltz ( double density, double efieldinput 
   return edrift * 1e-5; // from cm/s into mm per microsecond
 }
 
-vector<double> NESTcalc::SetDriftVelocity_NonUniform ( double rho, bool IsInGasPhase,
-  double z_step ) {
+vector<double> NESTcalc::SetDriftVelocity_NonUniform ( double rho, double zStep ) {
   
   vector<double> speedTable;
-  DetectorParameters detParam;
   double driftTime, zz;
   
-  for ( double pos_z = 0.0; pos_z < TopDrift; pos_z += z_step ) {
+  for ( double pos_z = 0.0; pos_z < fdetector->get_TopDrift(); pos_z += zStep ) {
     
     driftTime = 0.0;
-    for ( zz = pos_z; zz < TopDrift; zz += z_step ) {
+    for ( zz = pos_z; zz < fdetector->get_TopDrift(); zz += zStep ) {
       
-      detParam = GetDetector ( 0., 0., zz, IsInGasPhase );
-      if ( pos_z > gate ) {
-	if ( !IsInGasPhase )
-	  driftTime += z_step/SetDriftVelocity(T_Kelvin,rho,E_gas/(1.85/1.00126)*1e3);
+      if ( pos_z > fdetector->get_gate() ) {
+	if ( !fdetector->get_inGas() )
+	  driftTime += zStep/SetDriftVelocity(fdetector->get_T_Kelvin(), rho, fdetector->get_E_gas()/(1.85/1.00126)*1e3);
 	else // if gate == TopDrift properly set, shouldn't happen
-	  driftTime += z_step/SetDriftVelocity(T_Kelvin,rho,E_gas*1e3);
+	  driftTime += zStep/SetDriftVelocity(fdetector->get_T_Kelvin(), rho, fdetector->get_E_gas()*1e3);
       }
       else
-	driftTime += z_step/SetDriftVelocity(T_Kelvin,rho,detParam.efFit);
-      
+	driftTime += zStep/SetDriftVelocity(fdetector->get_T_Kelvin(), rho, fdetector->FitEF(0., 0., zz));
     }
     
     speedTable.push_back ( ( zz - pos_z ) / driftTime ); //uses highest zz
@@ -897,14 +780,14 @@ vector<double> NESTcalc::SetDriftVelocity_NonUniform ( double rho, bool IsInGasP
 vector<double> NESTcalc::xyResolution ( double xPos_mm, double yPos_mm, double A_top ) {
   
   vector<double> xySmeared(2);
-  A_top *= (1.-S2botTotRatio);
+  A_top *= (1.-fdetector->get_S2botTotRatio());
   
-  double radius = sqrt(pow(xPos_mm,2.)+pow(yPos_mm,2.));
-  double kappa = PosResBase + exp ( PosResExp * radius ); // arXiv:1710.02752
+  double rad = sqrt(pow(xPos_mm,2.)+pow(yPos_mm,2.));
+  double kappa = fdetector->get_PosResBase() + exp ( fdetector->get_PosResExp() * rad ); // arXiv:1710.02752
   double sigmaR = kappa / sqrt ( A_top ); // ibid.
   
-  double phi = 2. * M_PI * rand_uniform();
-  sigmaR = rand_gauss ( 0.0, sigmaR );
+  double phi = 2. * M_PI * RandomGen::rndm()->rand_uniform();
+  sigmaR = RandomGen::rndm()->rand_gauss ( 0.0, sigmaR );
   double sigmaX = sigmaR * cos ( phi );
   double sigmaY = sigmaR * sin ( phi );
   
@@ -914,3 +797,4 @@ vector<double> NESTcalc::xyResolution ( double xPos_mm, double yPos_mm, double A
   return xySmeared; //new X and Y position in mm with empirical smearing. LUX Run03 example
 
 }
+

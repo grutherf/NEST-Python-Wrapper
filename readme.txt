@@ -64,18 +64,20 @@ EXAMPLE
 7) create object "nestExec = wrapper.nest_py_wrapper()"
 
 
-8)Finally, call "results = nestExec.testNest([‘ignores first argument’, …])" to store the results of NEST
+8)Finally, call "results = nestExec.testNest([])" to store the results of NEST
 
-The argument structure is like that for a shell command
 testNest is the wrapper function within .cpp file that is being called  
 the first argument is ignored / dummy variable, 
 pass all subsequent variables as strings. See NEST readme with each argument in ‘ ’ and commas separating arguments.
+
+To have no reults printed out, call "nestExec.print_result_or_not(0)", before call "results = nestExec.testNest([])"
+To set it back, simply call "nestExec.print_result_or_not(1)"
 
 EXAMPLE
 
 >>> nestExec = wrapper.nest_py_wrapper()
 
->>> results = nestExec.testNEST(['ignore', '10', 'NR', '10', '10', '180', '-1'])
+>>> results = nestExec.testNEST(['10', 'NR', '10', '10', '180', '-1'])
 *** You are currently using the default LUX Run 3 detector settings. ***
 
 

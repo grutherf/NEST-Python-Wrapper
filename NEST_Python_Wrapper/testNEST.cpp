@@ -11,6 +11,52 @@
  * Created on August 1, 2017, 1:03 PM
  */
 
+/* 
+ * Original testNEST.cpp has been modified with python wrapper so that after compiling the NEST can be imported into python space as a module
+ * Author for python wrpper: D.Q. Huang
+ * Date: June 8, 2018
+ * version 1.0
+
+
+ * Parts has been added or modifed based on the original testNEST.cpp are indicated by 
+ * "// this part to be added for python wrapper --->" and "// this part to be added for python wrapper <---"
+ * where "--->" indicates the beginning of added part and "<----" indicates the end of the added part
+
+
+ * The wrapper contains five parts:
+ *  1. std_vector_to_py_list function, which is used to convert c++ vector to python-style list
+ *  2. nestOP stuct, which is the output type when run NEST in python
+ *  3. nest_py_wrapper,the wrapper class 
+ *  4. testNEST function, which is a function of nest_py_wrapper class, and the original main function
+ *  5. BOOST_PYTHON_MODULE(wrapper), at the very end of file, which wrappes up class and function defined to be callable by python
+
+
+ * Follow "readme.txt" to learn how to set up boost python and compile the code and run the module in python
+
+
+ * In case there is a new NEST output(e.g. nph, ne, etc.) that needed to be added, follow the following steps to modify the code (use nph as example)
+ *  1. add "boost::python::list nph;" into "nestOP" struct
+ *  2. add "vector<int> nph;" into "nestOP nest_py_wrapper::testNEST(boost::python::list command_input)" function
+ *  3. add "nest_op.nph = (std_vector_to_py_list<int>(nph));" into "nestOP nest_py_wrapper::testNEST(boost::python::list command_input)" function
+ *  4. add "nph" argument into "testNEST(argc, argv, nph, ne, s1_raw, s1_zCorr, s1c_spike, ne_extract, s2_raw, s2_zCorr);" which is in "nestOP nest_py_wrapper::testNEST(boost::python::list command_input)" function
+ *  5. add "vector<int>& nph" argument into "int testNEST(int argc, char** argv, vector<int>& nph, vector<int>& ne, vector<double>& s1_raw, vector<double>& s1_zCorr, vector<double>& s1c_spike, vector<int>& ne_extract, vector<double>& s2_raw, vector<double>& s2_zCorr);"
+ *  6. add "nph.push_back(quanta.photons);" inside the body of "int testNEST(int argc, char** argv, vector<int>& nph, vector<int>& ne, vector<double>& s1_raw, vector<double>& s1_zCorr, vector<double>& s1c_spike, vector<int>& ne_extract, vector<double>& s2_raw, vector<double>& s2_zCorr);"
+ *  7. add ".def_readonly("nph",&nestOP::nph)" into "BOOST_PYTHON_MODULE(wrapper)"
+
+ * In the output
+    nph -> number of photons generated at site
+    ne --> number of electros generated at site
+    s1_raw --> s1 raw size [PE]
+    s1_zCorr --> s1 size with z correction
+    s1c_spike --> s1 spike count with correction
+    ne_extract --> number of electrons extracted
+    s2_raw --> s2 raw size
+    s2_zCorr --> s2 size with drift correction
+ */ 
+
+
+
+
 #include "NEST.hh"
 #include "TestSpectra.hh"
 #include "analysis.hh"
@@ -65,6 +111,7 @@ private:
     int argc;
     char** argv;
     nestOP nest_op;
+    int print_result = 1;
     //  vector<int> nph;
     //  vector<int> ne;
     //  vector<double> s1_raw;
@@ -73,9 +120,10 @@ private:
     //  vector<int> ne_extract;
     //  vector<double> s2_raw;
     //  vector<double> s2_zCorr;
-    int testNEST(int argc, char** argv, vector<int>& nph, vector<int>& ne, vector<double>& s1_raw, vector<double>& s1_zCorr, vector<double>& s1c_spike, vector<int>& ne_extract, vector<double>& s2_raw, vector<double>& s2_zCorr);
+    int testNEST(int argc, char** argv, int print_result, vector<int>& nph, vector<int>& ne, vector<double>& s1_raw, vector<double>& s1_zCorr, vector<double>& s1c_spike, vector<int>& ne_extract, vector<double>& s2_raw, vector<double>& s2_zCorr);
 public:
     nestOP testNEST(boost::python::list command_input);
+    void print_result_or_not(int a){print_result = a;}
 };
 
 nestOP nest_py_wrapper::testNEST(boost::python::list command_input){
@@ -91,15 +139,17 @@ nestOP nest_py_wrapper::testNEST(boost::python::list command_input){
     vector<double> s2_zCorr;
     vector<boost::python::list> result;
     int l = len(command_input);
-    argc = l;
-    argv = (char**)std::malloc(argc*sizeof(char *));
+    argc = l+1;
+    argv = (char**)std::malloc((argc)*sizeof(char *));
     std::string str_[argc];
     for(int i = 0; i < argc; i++){
-        str_[i] = boost::python::extract<std::string>(command_input[i]);
+    	if(i==0){argv[i] = "ignore";}
+    	else{
+        str_[i] = boost::python::extract<std::string>(command_input[i-1]);
         argv[i] = const_cast<char *>(str_[i].c_str());
+        }
     }
-    //  argc = argc+1;
-    testNEST(argc, argv, nph, ne, s1_raw, s1_zCorr, s1c_spike, ne_extract, s2_raw, s2_zCorr);
+    testNEST(argc, argv, print_result, nph, ne, s1_raw, s1_zCorr, s1c_spike, ne_extract, s2_raw, s2_zCorr);
     free(argv);
     
     //  std::cout<<endl<<endl<<endl;
@@ -132,7 +182,7 @@ nestOP nest_py_wrapper::testNEST(boost::python::list command_input){
 
 //this method declaration used to be that of the main method. Simply change the name (and arguments if needed)
 // this part to be modified for python wrapper --->
-int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<int>& ne, vector<double>& s1_raw, vector<double>& s1_zCorr, vector<double>& s1c_spike, vector<int>& ne_extract, vector<double>& s2_raw, vector<double>& s2_zCorr) {
+int nest_py_wrapper::testNEST (int argc, char** argv, int print_result, vector<int>& nph, vector<int>& ne, vector<double>& s1_raw, vector<double>& s1_zCorr, vector<double>& s1c_spike, vector<int>& ne_extract, vector<double>& s2_raw, vector<double>& s2_zCorr) {
     // this part to be modified for python wrapper <---
     
   // Instantiate your own VDetector class here, then load into NEST class constructor
@@ -403,8 +453,9 @@ int nest_py_wrapper::testNEST (int argc, char** argv, vector<int>& nph, vector<i
       pos_x = xySmeared[0];
       pos_y = xySmeared[1];
     }
-    
-    if ( 1 ) { //fabs(scint[7]) > DBL_MIN && fabs(scint2[7]) > DBL_MIN ) { //if you want to skip specific below-threshold events, then please comment in this if statement
+// this part to be added for python wrapper --->  (print_result was set to be 0 in original NEST code)
+    if ( print_result ) { //fabs(scint[7]) > DBL_MIN && fabs(scint2[7]) > DBL_MIN ) { //if you want to skip specific below-threshold events, then please comment in this if statement
+    // this part to be added for python wrapper <----
       printf("%.6f\t%.6f\t%.6f\t%.0f, %.0f, %.0f\t%d\t%d\t",keV,field,driftTime,pos_x,pos_y,pos_z,quanta.photons,quanta.electrons); //comment this out when below line in
       //printf("%.6f\t%.6f\t%.6f\t%.0f, %.0f, %.0f\t%lf\t%lf\t",keV,field,driftTime,pos_x,pos_y,pos_z,yields.PhotonYield,yields.ElectronYield); //for when you want means
       if ( keV > 1000. ) { //switch to exponential notation to make output more readable, if energy is too high (>1 MeV)
@@ -580,12 +631,13 @@ BOOST_PYTHON_MODULE(wrapper)
     class_<std::vector<int> >("double_vector2")
     .def(vector_indexing_suite<std::vector<int> >());
     
-    class_<std::vector<double> >("double_vector2")
+    class_<std::vector<double> >("double_vector3")
     .def(vector_indexing_suite<std::vector<double> >());
     
     nestOP (nest_py_wrapper::*testNEST)(boost::python::list) = &nest_py_wrapper::testNEST;
     
     class_<nest_py_wrapper>("nest_py_wrapper")
+    .def("print_result_or_not", &nest_py_wrapper::print_result_or_not)
     .def("testNEST", testNEST);
     
     class_<nestOP>("nestOP")

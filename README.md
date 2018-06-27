@@ -23,11 +23,17 @@
   * If you are not using MacOS, delete ```-mmacosx-version-min=10.7```
     from the extra_compile_args section. 
   
-### 3: Modify testNEST.cpp
+### 3: Modify files
   * Look at testNEST_HOW_TO_MODIFY.cpp. 
     Copy the code blocks that are sandwiched between arrows into their relative positions in testNEST.cpp. 
     Portions of testNEST.cpp are omitted from testNEST_HOW_TO_MODIFY.cpp. 
     Where this is done, they have been replaced with “………………”
+  * Consider commenting out 
+    ```
+    cerr << "*** Detector definition message ***" << endl;
+    cerr << "You are currently using the default LZ detector." << endl << endl;
+    ```
+    in LZ_Detector.hh to make the code run faster. 
 ### 4: Create the wrapper module
   1. cd into the directory that contains the NEST code and setup.py
   
